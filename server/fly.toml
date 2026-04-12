@@ -1,0 +1,21 @@
+# Fly.io — from server/: run `fly launch` once (sets `app` name), then `fly secrets set ...`, then `fly deploy`.
+# If `app` name is taken, pick a unique name in the Fly dashboard or edit below after launch.
+
+app = "autexa-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

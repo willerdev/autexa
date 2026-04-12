@@ -1,0 +1,5 @@
+# Speed up EAS uploads (optional)
+server/node_modules
+**/.git
+**/android/build
+**/ios/build

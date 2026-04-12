@@ -31,7 +31,11 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+cre.txt
+cre copy.txt
+cred.txt
 
 # typescript
 *.tsbuildinfo

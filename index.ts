@@ -1,4 +1,13 @@
+import './src/polyfills/installCrypto';
+import 'react-native-url-polyfill/auto';
+import 'react-native-gesture-handler';
+import { LogBox } from 'react-native';
 import { registerRootComponent } from 'expo';
+
+// Expected fetch failures still surface via Alert; LogBox duplicates them and draws over the gesture bar on Android.
+if (__DEV__) {
+  LogBox.ignoreLogs([/Network request failed/i]);
+}
 
 import App from './App';
 
