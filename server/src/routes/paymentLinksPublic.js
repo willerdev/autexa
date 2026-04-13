@@ -47,14 +47,14 @@ paymentLinksPublicRouter.post('/:slug/topup', async (req, res) => {
       return res.status(429).json({ error: 'Too many requests. Try again later.' });
     }
     const { amount, phone, provider } = req.body ?? {};
-    if (amount == null || !phone || !provider) {
-      return res.status(400).json({ error: 'amount, phone, and provider are required' });
+    if (amount == null || !phone) {
+      return res.status(400).json({ error: 'amount and phone are required' });
     }
     const result = await walletService.initiateGuestTopupForLink({
       slug: req.params.slug,
       amount: Number(amount),
       phone: String(phone),
-      provider: String(provider),
+      provider: provider != null ? String(provider) : 'auto',
     });
     res.json(result);
   } catch (e) {

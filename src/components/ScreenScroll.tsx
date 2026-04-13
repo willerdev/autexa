@@ -32,7 +32,7 @@ export function ScreenScroll({ children, style, contentContainerStyle, edges }: 
 
   const scrollContentResolved = useMemo(() => {
     const flat = StyleSheet.flatten([styles.scrollContent, contentContainerStyle]) as ViewStyle;
-    const baseTop = typeof flat.paddingTop === 'number' ? flat.paddingTop : spacing.md;
+    const baseTop = typeof flat.paddingTop === 'number' ? flat.paddingTop : spacing.sm;
     const baseBottom = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : spacing.xl;
     return [
       styles.scrollContent,
@@ -76,6 +76,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
 });

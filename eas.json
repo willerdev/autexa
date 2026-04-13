@@ -21,6 +21,13 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "production-aab": {
+      "extends": "production",
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {

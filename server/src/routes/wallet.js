@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireUser } from '../lib/auth.js';
 import { createServiceClient } from '../lib/supabase.js';
 import * as walletService from '../services/walletService.js';
+import Stripe from 'stripe';
 
 export const walletRouter = Router();
 walletRouter.use(requireUser);
@@ -19,14 +20,14 @@ walletRouter.get('/', async (req, res) => {
 walletRouter.post('/topup', async (req, res) => {
   try {
     const { amount, phone, provider } = req.body ?? {};
-    if (amount == null || !phone || !provider) {
-      return res.status(400).json({ error: 'amount, phone, and provider are required' });
+    if (amount == null || !phone) {
+      return res.status(400).json({ error: 'amount and phone are required' });
     }
     const result = await walletService.initiateTopup({
       userId: req.user.id,
       amount: Number(amount),
       phone: String(phone),
-      provider: String(provider),
+      provider: provider != null ? String(provider) : 'auto',
     });
     res.json(result);
   } catch (e) {
@@ -49,18 +50,63 @@ walletRouter.get('/topup/:id/status', async (req, res) => {
 walletRouter.post('/withdraw', async (req, res) => {
   try {
     const { amount, phone, provider } = req.body ?? {};
-    if (amount == null || !phone || !provider) {
-      return res.status(400).json({ error: 'amount, phone, and provider are required' });
+    if (amount == null || !phone) {
+      return res.status(400).json({ error: 'amount and phone are required' });
     }
     const result = await walletService.initiateWithdrawal({
       userId: req.user.id,
       amount: Number(amount),
       phone: String(phone),
-      provider: String(provider),
+      provider: provider != null ? String(provider) : 'auto',
     });
     res.json(result);
   } catch (e) {
     res.status(400).json({ error: e?.message || 'Withdrawal failed' });
+  }
+});
+
+walletRouter.post('/topup/card', async (req, res) => {
+  try {
+    const { amount } = req.body ?? {};
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt < 1000) return res.status(400).json({ error: 'Minimum top-up is 1,000 UGX' });
+    if (amt > 5_000_000) return res.status(400).json({ error: 'Maximum top-up is 5,000,000 UGX' });
+
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) return res.status(501).json({ error: 'Card top-up not configured (missing STRIPE_SECRET_KEY)' });
+
+    const stripe = new Stripe(key);
+    const serverBase = process.env.PUBLIC_SERVER_URL || process.env.SERVER_PUBLIC_URL || '';
+    if (!serverBase) {
+      return res.status(500).json({ error: 'Missing PUBLIC_SERVER_URL (needed for Stripe return URLs)' });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'ugx',
+            unit_amount: Math.round(amt),
+            product_data: { name: 'Autexa wallet top-up' },
+          },
+        },
+      ],
+      metadata: {
+        kind: 'wallet_topup',
+        user_id: req.user.id,
+        amount_ugx: String(Math.round(amt)),
+      },
+      success_url: `${serverBase.replace(/\/$/, '')}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${serverBase.replace(/\/$/, '')}/checkout/cancel`,
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (e) {
+    console.error('[POST /wallet/topup/card]', e);
+    res.status(500).json({ error: e?.message || 'Could not start card payment' });
   }
 });
 

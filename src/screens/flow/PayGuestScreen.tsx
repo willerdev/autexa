@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +21,7 @@ import { isAutexaApiConfigured } from '../../config/env';
 import { Card, PrimaryButton } from '../../components';
 import { colors, radius, spacing } from '../../theme';
 
-type Momo = 'mtn' | 'airtel';
+type Momo = 'auto';
 
 function num(v: string) {
   const n = Number(String(v).replace(/,/g, '').trim());
@@ -32,7 +33,7 @@ export function PayGuestScreen({ slug, onClose }: { slug: string; onClose: () =>
   const [loadErr, setLoadErr] = useState('');
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
-  const [provider, setProvider] = useState<Momo>('mtn');
+  const [provider] = useState<Momo>('auto');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [pollId, setPollId] = useState<string | null>(null);
@@ -113,7 +114,10 @@ export function PayGuestScreen({ slug, onClose }: { slug: string; onClose: () =>
   return (
     <View style={styles.wrap}>
       <View style={styles.topBar}>
-        <Text style={styles.brand}>Autexa</Text>
+        <View style={styles.brandRow}>
+          <Image source={require('../../../assets/images/icon.png')} style={styles.brandIcon} />
+          <Text style={styles.brand}>Autexa</Text>
+        </View>
         <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={28} color={colors.text} />
         </Pressable>
@@ -134,19 +138,7 @@ export function PayGuestScreen({ slug, onClose }: { slug: string; onClose: () =>
                 Suggested: {Math.round(Number(meta.suggested_amount_ugx)).toLocaleString()} UGX
               </Text>
             ) : null}
-            <View style={styles.toggleRow}>
-              {(['mtn', 'airtel'] as const).map((p) => (
-                <Pressable
-                  key={p}
-                  onPress={() => setProvider(p)}
-                  style={[styles.toggleChip, provider === p && styles.toggleChipActive]}
-                >
-                  <Text style={[styles.toggleText, provider === p && styles.toggleTextActive]}>
-                    {p === 'mtn' ? 'MTN' : 'Airtel'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <Text style={styles.sub}>Mobile money: MTN / Airtel (auto-detected)</Text>
             {!fixedAmount ? (
               <TextInput
                 style={styles.input}
@@ -196,25 +188,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  brandIcon: { width: 28, height: 28, borderRadius: 7 },
   brand: { fontSize: 18, fontWeight: '800', color: colors.text },
   scroll: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
   sub: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
   cardTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
   bigAmt: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
-  toggleRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  toggleChip: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  toggleChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  toggleText: { fontSize: 15, fontWeight: '700', color: colors.textSecondary },
-  toggleTextActive: { color: colors.primary },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

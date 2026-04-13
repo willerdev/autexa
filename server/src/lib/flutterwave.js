@@ -162,6 +162,17 @@ export function providerToNetwork(provider) {
   throw new Error('provider must be mtn or airtel (Flutterwave network)');
 }
 
+export function inferUgNetworkFromPhone(phone) {
+  const n = ugNationalMsisdn(phone);
+  const prefix = n.slice(0, 2);
+  // Uganda prefixes (best-effort). If unsure, default to MTN then Airtel by trying both upstream.
+  const mtn = new Set(['76', '77', '78', '79']);
+  const airtel = new Set(['70', '74', '75']);
+  if (mtn.has(prefix)) return 'MTN';
+  if (airtel.has(prefix)) return 'AIRTEL';
+  return null;
+}
+
 function splitName(full) {
   const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: 'Autexa', last: 'User' };
@@ -243,6 +254,16 @@ export async function chargeUgandaMobileMoney({
     throw new Error('Invalid Uganda phone number');
   }
 
+  const inferred = inferUgNetworkFromPhone(phone);
+  const networksToTry = [];
+  if (network && String(network).trim()) {
+    networksToTry.push(String(network).trim().toUpperCase());
+  } else if (inferred) {
+    networksToTry.push(inferred);
+  } else {
+    networksToTry.push('MTN', 'AIRTEL');
+  }
+
   let cust;
   try {
     cust = await v4CreateCustomer({
@@ -268,20 +289,27 @@ export async function chargeUgandaMobileMoney({
   const customerId = cust?.data?.id;
   if (!customerId) throw new Error('Flutterwave did not return customer id');
 
-  const pm = await v4CreateUgMobileMoneyPaymentMethod({
-    network,
-    phoneNational,
-  });
-  const paymentMethodId = pm?.data?.id;
-  if (!paymentMethodId) throw new Error('Flutterwave did not return payment_method id');
-
-  return v4CreateCharge({
-    reference: String(txRef),
-    amountUgx,
-    customerId,
-    paymentMethodId,
-    meta,
-  });
+  let lastErr;
+  for (const net of networksToTry) {
+    try {
+      const pm = await v4CreateUgMobileMoneyPaymentMethod({
+        network: net,
+        phoneNational,
+      });
+      const paymentMethodId = pm?.data?.id;
+      if (!paymentMethodId) throw new Error('Flutterwave did not return payment_method id');
+      return v4CreateCharge({
+        reference: String(txRef),
+        amountUgx,
+        customerId,
+        paymentMethodId,
+        meta,
+      });
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Flutterwave mobile money request failed');
 }
 
 /**
@@ -326,31 +354,47 @@ export async function createUgMobileMoneyTransfer({
   const { first, last } = splitName(beneficiaryName);
   const msisdn = normalizeUgPhoneForTransfer(phone).replace(/^\+?/, '');
   const value = Math.round(Number(amountUgx));
+  const inferred = inferUgNetworkFromPhone(phone);
+  const networksToTry = [];
+  if (network && String(network).trim()) {
+    networksToTry.push(String(network).trim().toUpperCase());
+  } else if (inferred) {
+    networksToTry.push(inferred);
+  } else {
+    networksToTry.push('MTN', 'AIRTEL');
+  }
 
-  const jsonBody = {
-    action: 'instant',
-    type: 'mobile_money',
-    reference: String(reference),
-    narration: narration || 'Autexa withdrawal',
-    payment_instruction: {
-      source_currency: 'UGX',
-      destination_currency: 'UGX',
-      amount: { applies_to: 'destination_currency', value },
-      recipient: {
+  let lastErr;
+  for (const net of networksToTry) {
+    try {
+      const jsonBody = {
+        action: 'instant',
         type: 'mobile_money',
-        name: { first, last },
-        mobile_money: {
-          network,
-          msisdn,
+        reference: String(reference),
+        narration: narration || 'Autexa withdrawal',
+        payment_instruction: {
+          source_currency: 'UGX',
+          destination_currency: 'UGX',
+          amount: { applies_to: 'destination_currency', value },
+          recipient: {
+            type: 'mobile_money',
+            name: { first, last },
+            mobile_money: {
+              network: net,
+              msisdn,
+            },
+          },
         },
-      },
-    },
-  };
-
-  return v4Request('post', '/direct-transfers', {
-    idempotencyKey: `trf-${reference}`,
-    jsonBody,
-  });
+      };
+      return await v4Request('post', '/direct-transfers', {
+        idempotencyKey: `trf-${reference}`,
+        jsonBody,
+      });
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Flutterwave transfer failed');
 }
 
 /**

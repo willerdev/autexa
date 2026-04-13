@@ -2,6 +2,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -125,6 +126,10 @@ function GlobalNotice() {
   );
 }
 
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* already hidden or unavailable */
+});
+
 export default function App() {
   useEffect(() => {
     void logSupabaseReachabilityInDev();
@@ -143,6 +148,7 @@ export default function App() {
             ref={rootNavigationRef}
             theme={navTheme}
             onReady={() => {
+              void SplashScreen.hideAsync();
               const s = rootNavigationRef.getRootState();
               useUiStore.getState().setNavFocusedLeafName(s ? getFocusedRouteName(s) : undefined);
             }}

@@ -18,7 +18,7 @@ import { serviceCatalogRouter } from './routes/serviceCatalog.js';
 import { paymentLinksPublicRouter } from './routes/paymentLinksPublic.js';
 import { savingsChallengesRouter } from './routes/savingsChallenges.js';
 import { walletRouter } from './routes/wallet.js';
-import { completePendingTopupByTxRef } from './services/walletService.js';
+import { completePendingTopupByTxRef, creditWallet } from './services/walletService.js';
 
 // Load server/.env from this package root (not process.cwd()) so FLUTTERWAVE_* etc. load
 // when the API is started from the monorepo root or any other working directory.
@@ -97,8 +97,22 @@ app.post(
         const session = event.data.object;
         const bookingId = session.metadata?.booking_id;
         const userId = session.metadata?.user_id;
+        const kind = session.metadata?.kind;
         const amount = session.amount_total;
-        if (bookingId && userId) {
+        if (kind === 'wallet_topup' && userId) {
+          const ugx = Number(session.metadata?.amount_ugx || 0);
+          if (Number.isFinite(ugx) && ugx > 0) {
+            await creditWallet({
+              userId,
+              amount: ugx,
+              description: 'Card top-up (Stripe)',
+              paymentMethod: 'stripe',
+              momoPhone: null,
+              momoProvider: null,
+              momoReference: session.id,
+            });
+          }
+        } else if (bookingId && userId) {
           const sb = createServiceClient();
           await sb
             .from('bookings')

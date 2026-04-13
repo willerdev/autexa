@@ -105,7 +105,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
       return (
         <View style={styles.logoBlock}>
           <Image
-            source={require('../../AppIcons/Assets.xcassets/AppIcon.appiconset/1024.png')}
+            source={require('../../assets/images/icon.png')}
             style={styles.logoImage}
           />
           <Text style={[styles.logoText, { color: colors.primary }]}>AUTEXA</Text>

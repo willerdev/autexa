@@ -72,23 +72,30 @@ The server listens on `0.0.0.0` so it works inside containers.
 
 1. `npx expo login` and `npm install` at repo root.
 2. `npx eas-cli@latest init` — links the project and writes `extra.eas.projectId` into your Expo config when prompted.
-3. Create secrets so **production** builds embed public client config (not secrets like service role):
+3. Set **EAS environment variables** for the **production** environment (Expo dashboard → Project → Environment variables, or CLI) so cloud builds embed public client config. Use your **HTTPS** API URL (never `localhost` on EAS):
+
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `EXPO_PUBLIC_AUTEXA_API_URL` (e.g. `https://your-api.onrender.com`)
+   - Optional: `EXPO_PUBLIC_WEB_APP_URL` (payment links in browser), `EXPO_PUBLIC_SUPPORT_USER_ID`
+
+   Example (adjust profile/environment flags to match your Expo account):
 
    ```bash
-   npx eas-cli@latest secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://xxx.supabase.co" --type string
-   npx eas-cli@latest secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "eyJ..." --type string
-   npx eas-cli@latest secret:create --scope project --name EXPO_PUBLIC_AUTEXA_API_URL --value "https://your-api.example.com" --type string
+   npx eas-cli@latest env:create --name EXPO_PUBLIC_SUPABASE_URL --value "https://xxx.supabase.co" --environment production --type string
+   npx eas-cli@latest env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "eyJ..." --environment production --type sensitive
+   npx eas-cli@latest env:create --name EXPO_PUBLIC_AUTEXA_API_URL --value "https://your-api.example.com" --environment production --type string
    ```
 
-   Optional: `EXPO_PUBLIC_SUPPORT_USER_ID` if you use it.
-
 4. Builds are defined in [`eas.json`](eas.json):
-   - **preview** — `android.buildType: apk` → shareable APK for testers.
-   - **production** — `app-bundle` → upload to Google Play.
+   - **preview** — internal APK for testers.
+   - **production** — release APK (sideload / distribution outside Play if you use APK).
+   - **production-aab** — Android App Bundle for **Google Play** (`distribution: store`).
 
    ```bash
    npx eas-cli@latest build -p android --profile preview
    npx eas-cli@latest build -p android --profile production
+   npx eas-cli@latest build -p android --profile production-aab
    ```
 
 5. iTunes / Play: use `eas submit` when you are ready (Apple Developer / Play Console accounts required).

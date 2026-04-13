@@ -33,10 +33,12 @@ function normalizeAutexaApiUrl(url: string): string {
   const t = stripOuterQuotes(trimEnv(url)).replace(/\/$/, '');
   if (!t) return '';
 
-  // Dev convenience: map hostnames correctly per simulator/emulator.
+  // Dev convenience: map hostnames correctly per simulator/emulator only.
   // - Android emulator cannot reach host localhost; use 10.0.2.2
-  // - iOS simulator can reach host localhost; 10.0.2.2 is Android-specific
-  if (Platform.OS === 'android') {
+  // - Physical Android: use your computer's LAN IP (same Wi‑Fi) or `adb reverse tcp:8787 tcp:8787` + localhost
+  // - iOS simulator can use localhost; map 10.0.2.2 back if copied from Android emulator notes
+  const physicalAndroid = Platform.OS === 'android' && Constants.isDevice === true;
+  if (Platform.OS === 'android' && !physicalAndroid) {
     if (t.startsWith('http://localhost:') || t.startsWith('http://127.0.0.1:')) {
       return t.replace('http://localhost:', 'http://10.0.2.2:').replace('http://127.0.0.1:', 'http://10.0.2.2:');
     }

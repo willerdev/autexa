@@ -55,6 +55,13 @@ function readPublicEnv(name) {
   return '';
 }
 
+const autexaApiUrlForCleartext = readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL');
+/** Only allow HTTP (local dev); production HTTPS should not need cleartext. */
+const allowAndroidCleartext =
+  typeof autexaApiUrlForCleartext === 'string' &&
+  autexaApiUrlForCleartext.length > 0 &&
+  /^http:\/\//i.test(autexaApiUrlForCleartext);
+
 module.exports = {
   expo: {
     ...appJson.expo,
@@ -73,12 +80,21 @@ module.exports = {
     android: {
       ...appJson.expo.android,
       package: 'com.autexa.app',
+      usesCleartextTraffic: allowAndroidCleartext,
     },
     // RN New Architecture + Android has had intermittent fetch/DNS issues; disable for stability.
     newArchEnabled: false,
     scheme: 'autexa',
     plugins: [
       ...(appJson.expo.plugins ?? []),
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/images/splash.png',
+          resizeMode: 'contain',
+          backgroundColor: '#175EA3',
+        },
+      ],
       'expo-web-browser',
       'expo-notifications',
       'expo-font',

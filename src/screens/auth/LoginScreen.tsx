@@ -49,7 +49,7 @@ export function LoginScreen() {
     <ScreenScroll contentContainerStyle={styles.content} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.centerBlock}>
         <Image
-          source={require('../../../AppIcons/Assets.xcassets/AppIcon.appiconset/1024.png')}
+          source={require('../../../assets/images/icon.png')}
           style={styles.brandIcon}
         />
         <Text style={styles.wordmark}>AUTEXA</Text>

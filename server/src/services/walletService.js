@@ -212,7 +212,8 @@ export async function initiateTopup({ userId, amount, phone, provider, paymentLi
   if (!Number.isFinite(amt) || amt < 1000) throw new Error('Minimum top-up is 1,000 UGX');
   if (amt > 5_000_000) throw new Error('Maximum top-up is 5,000,000 UGX');
   const p = String(provider || '').toLowerCase();
-  if (p !== 'mtn' && p !== 'airtel') throw new Error('provider must be mtn or airtel');
+  const prov = p === 'auto' || !p ? null : p;
+  if (prov && prov !== 'mtn' && prov !== 'airtel') throw new Error('provider must be mtn, airtel, or auto');
 
   await getWallet(userId);
   const externalId = crypto.randomUUID();
@@ -221,7 +222,7 @@ export async function initiateTopup({ userId, amount, phone, provider, paymentLi
     user_id: userId,
     amount: amt,
     phone: String(phone).trim(),
-    provider: p,
+    provider: prov || 'auto',
     external_reference: externalId,
   };
   if (paymentLinkId) insertRow.payment_link_id = paymentLinkId;
@@ -235,7 +236,7 @@ export async function initiateTopup({ userId, amount, phone, provider, paymentLi
 
   let instructionNote = '';
   try {
-    const network = flutterwave.providerToNetwork(p);
+    const network = prov ? flutterwave.providerToNetwork(prov) : null;
     const email = await getUserEmailForPayments(userId);
     const fwRes = await flutterwave.chargeUgandaMobileMoney({
       amountUgx: amt,
@@ -476,7 +477,8 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
   const fee = Math.round(amt * FEE_PCT * 100) / 100;
   const totalDeducted = amt + fee;
   const p = String(provider || '').toLowerCase();
-  if (p !== 'mtn' && p !== 'airtel') throw new Error('provider must be mtn or airtel');
+  const prov = p === 'auto' || !p ? null : p;
+  if (prov && prov !== 'mtn' && prov !== 'airtel') throw new Error('provider must be mtn, airtel, or auto');
 
   const supabase = sb();
   const wallet = await getWallet(userId);
@@ -509,8 +511,8 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
       balance_after: after,
       payment_method: 'flutterwave',
       momo_phone: String(phone).trim(),
-      momo_provider: p,
-      description: `Withdrawal via Flutterwave (${p.toUpperCase()}) ${phone}`,
+      momo_provider: prov || 'auto',
+      description: `Withdrawal via Flutterwave (${(prov || 'auto').toUpperCase()}) ${phone}`,
       initiated_by: 'user',
       status: 'pending',
     })
@@ -527,7 +529,7 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
       fee,
       net_amount: amt,
       phone: String(phone).trim(),
-      provider: p,
+      provider: prov || 'auto',
       external_reference: externalId,
       status: 'processing',
     })
@@ -536,7 +538,7 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
   if (wrErr) throw new Error(wrErr.message);
 
   try {
-    const network = flutterwave.providerToNetwork(p);
+    const network = prov ? flutterwave.providerToNetwork(prov) : null;
     await flutterwave.createUgMobileMoneyTransfer({
       amountUgx: amt,
       phone,

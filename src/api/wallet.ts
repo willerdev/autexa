@@ -24,7 +24,9 @@ export type TopupResponse = {
   expiresIn: string;
 };
 
-export async function requestWalletTopup(body: { amount: number; phone: string; provider: 'mtn' | 'airtel' }) {
+export type MobileMoneyProvider = 'auto' | 'mtn' | 'airtel';
+
+export async function requestWalletTopup(body: { amount: number; phone: string; provider?: MobileMoneyProvider }) {
   return autexaFetch<TopupResponse>('/api/wallet/topup', { method: 'POST', json: body });
 }
 
@@ -46,8 +48,14 @@ export type WithdrawResponse = {
   message: string;
 };
 
-export async function requestWalletWithdraw(body: { amount: number; phone: string; provider: 'mtn' | 'airtel' }) {
+export async function requestWalletWithdraw(body: { amount: number; phone: string; provider?: MobileMoneyProvider }) {
   return autexaFetch<WithdrawResponse>('/api/wallet/withdraw', { method: 'POST', json: body });
+}
+
+export type CardTopupResponse = { url: string | null; sessionId: string };
+
+export async function requestWalletCardTopup(body: { amount: number }) {
+  return autexaFetch<CardTopupResponse>('/api/wallet/topup/card', { method: 'POST', json: body });
 }
 
 export type SavingsTransferResponse = {

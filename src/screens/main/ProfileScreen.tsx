@@ -35,6 +35,77 @@ export function ProfileScreen() {
         ) : null}
       </Card>
 
+      <Text style={styles.section}>Wallet & savings</Text>
+      <Card>
+        <Pressable style={styles.settingRow} onPress={() => navigation.navigate('Wallet')}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="wallet-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Wallet overview</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable
+          style={styles.settingRow}
+          onPress={() => navigateAppStack(navigation, 'WalletTransactions', undefined)}
+        >
+          <View style={styles.settingIcon}>
+            <Ionicons name="receipt-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Transaction history</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'WalletPayees', undefined)}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="people-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Saved payees</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable
+          style={styles.settingRow}
+          onPress={() => navigateAppStack(navigation, 'WalletPaymentLinks', undefined)}
+        >
+          <View style={styles.settingIcon}>
+            <Ionicons name="link-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Payment links</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'WalletSavings', undefined)}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="archive-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Savings</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable
+          style={styles.settingRow}
+          onPress={() => navigateAppStack(navigation, 'WalletTransfers', undefined)}
+        >
+          <View style={styles.settingIcon}>
+            <Ionicons name="swap-horizontal-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Transfers</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable
+          style={styles.settingRow}
+          onPress={() => navigateAppStack(navigation, 'SavingsChallenges', undefined)}
+        >
+          <View style={styles.settingIcon}>
+            <Ionicons name="trophy-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Savings challenges</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+      </Card>
+
       <Text style={styles.section}>Settings</Text>
       <Card>
         <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'MyCars', undefined)}>
@@ -53,14 +124,6 @@ export function ProfileScreen() {
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
           </View>
           <Text style={styles.settingLabel}>Notifications</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'Wallet', undefined)}>
-          <View style={styles.settingIcon}>
-            <Ionicons name="wallet-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Wallet</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
         <View style={styles.divider} />

@@ -18,6 +18,8 @@ import { ProviderBookingsScreen } from '../screens/provider/ProviderBookingsScre
 import { WalletScreen } from '../screens/flow/WalletScreen';
 import { WalletPayeesScreen } from '../screens/flow/WalletPayeesScreen';
 import { WalletPaymentLinksScreen } from '../screens/flow/WalletPaymentLinksScreen';
+import { WalletSavingsScreen } from '../screens/flow/WalletSavingsScreen';
+import { WalletTransfersScreen } from '../screens/flow/WalletTransfersScreen';
 import { WalletTransactionsScreen } from '../screens/flow/WalletTransactionsScreen';
 import { SavingsChallengesScreen } from '../screens/flow/SavingsChallengesScreen';
 import { SavingsChallengeDetailScreen } from '../screens/flow/SavingsChallengeDetailScreen';
@@ -82,6 +84,8 @@ export function AppStackNavigator() {
       <Stack.Screen name="WalletTransactions" component={WalletTransactionsScreen} options={{ title: 'Transactions' }} />
       <Stack.Screen name="WalletPayees" component={WalletPayeesScreen} options={{ title: 'Saved payees' }} />
       <Stack.Screen name="WalletPaymentLinks" component={WalletPaymentLinksScreen} options={{ title: 'Payment links' }} />
+      <Stack.Screen name="WalletSavings" component={WalletSavingsScreen} options={{ title: 'Savings' }} />
+      <Stack.Screen name="WalletTransfers" component={WalletTransfersScreen} options={{ title: 'Transfers' }} />
       <Stack.Screen name="SavingsChallenges" component={SavingsChallengesScreen} options={{ title: 'Savings challenges' }} />
       <Stack.Screen
         name="SavingsChallengeDetail"

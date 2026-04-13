@@ -1,32 +1,33 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { AutexaApiError } from '../../api/autexaServer';
 import {
-  depositToSavings,
   fetchTopupStatus,
   fetchWallet,
+  fetchWalletTransactions,
+  requestWalletCardTopup,
   requestWalletTopup,
   requestWalletWithdraw,
-  withdrawFromSavings,
+  type WalletTransaction,
 } from '../../api/wallet';
 import { Card, PrimaryButton, ScreenScroll, TextField } from '../../components';
 import { isAutexaApiConfigured } from '../../config/env';
-import type { WalletTabStackParamList } from '../../navigation/WalletTabNavigator';
 import { colors, radius, spacing } from '../../theme';
 
-type MomoProvider = 'mtn' | 'airtel';
+type MomoProvider = 'auto';
 
 function num(v: string) {
   const n = Number(String(v).replace(/,/g, '').trim());
@@ -37,39 +38,77 @@ function fmtMoney(n: number, currency: string) {
   return `${n.toLocaleString()} ${currency}`;
 }
 
+function fmtTxAmount(tx: WalletTransaction) {
+  const n = Number(tx.amount);
+  const cur = tx.currency || 'UGX';
+  return `${n.toLocaleString()} ${cur}`;
+}
+
 export function WalletScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<WalletTabStackParamList>>();
+  const navigation = useNavigation();
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchWallet>> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [txRows, setTxRows] = useState<WalletTransaction[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
-  const [provider, setProvider] = useState<MomoProvider>('mtn');
+  const [provider] = useState<MomoProvider>('auto');
   const [topupBusy, setTopupBusy] = useState(false);
   const [withdrawBusy, setWithdrawBusy] = useState(false);
-  const [savingsBusy, setSavingsBusy] = useState(false);
   const [pollingTopupId, setPollingTopupId] = useState<string | null>(null);
-  const enterY = useRef(new Animated.Value(14)).current;
+  const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | 'card'>(null);
+
+  const enterY = useRef(new Animated.Value(10)).current;
   const enterOpacity = useRef(new Animated.Value(0)).current;
   const balancePulse = useRef(new Animated.Value(1)).current;
 
   const loadWallet = useCallback(async () => {
     if (!isAutexaApiConfigured()) {
       setWallet(null);
+      setLoadError(null);
       setLoading(false);
       return;
     }
+    setLoadError(null);
     try {
       setLoading(true);
       const w = await fetchWallet();
       setWallet(w);
     } catch (e) {
-      const msg = e instanceof AutexaApiError ? e.message : 'Could not load wallet';
-      Alert.alert('Wallet', msg);
+      const msg =
+        e instanceof AutexaApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : 'Could not load wallet';
+      const hint =
+        e instanceof AutexaApiError && e.status === 0
+          ? ' Check EXPO_PUBLIC_AUTEXA_API_URL and your network.'
+          : '';
+      setLoadError(`${msg}${hint}`);
       setWallet(null);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const refreshTxPreview = useCallback(async () => {
+    if (!isAutexaApiConfigured() || !wallet) {
+      setTxRows([]);
+      setTxLoading(false);
+      return;
+    }
+    setTxLoading(true);
+    try {
+      const res = await fetchWalletTransactions({ page: 1, limit: 8 });
+      setTxRows(res.data ?? []);
+    } catch {
+      setTxRows([]);
+    } finally {
+      setTxLoading(false);
+    }
+  }, [wallet]);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,9 +117,19 @@ export function WalletScreen() {
   );
 
   useEffect(() => {
+    void refreshTxPreview();
+  }, [refreshTxPreview]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshTxPreview();
+    }, [refreshTxPreview]),
+  );
+
+  useEffect(() => {
     Animated.parallel([
-      Animated.timing(enterOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.timing(enterY, { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(enterOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(enterY, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start();
   }, [enterOpacity, enterY]);
 
@@ -98,9 +147,12 @@ export function WalletScreen() {
           setPollingTopupId(null);
           Alert.alert(
             'Top-up',
-            s.already_credited ? 'Your wallet is up to date.' : `Added ${fmtMoney(Number(s.amount ?? 0), wallet?.currency ?? 'UGX')}.`,
+            s.already_credited
+              ? 'Your wallet is up to date.'
+              : `Added ${fmtMoney(Number(s.amount ?? 0), wallet?.currency ?? 'UGX')}.`,
           );
           void loadWallet();
+          void refreshTxPreview();
           return;
         }
         if (s.status === 'failed') {
@@ -125,21 +177,20 @@ export function WalletScreen() {
       cancelled = true;
       if (interval) clearInterval(interval);
     };
-  }, [pollingTopupId, loadWallet, wallet?.currency]);
+  }, [pollingTopupId, loadWallet, refreshTxPreview, wallet?.currency]);
 
   const balance = wallet ? Number(wallet.balance) : 0;
   const savings = wallet && wallet.savings_balance != null ? Number(wallet.savings_balance) : 0;
   const currency = wallet?.currency ?? 'UGX';
   const locked = Boolean(wallet?.is_locked);
-  const total = useMemo(() => balance + savings, [balance, savings]);
 
   useEffect(() => {
     if (!wallet) return;
     Animated.sequence([
-      Animated.timing(balancePulse, { toValue: 1.02, duration: 120, useNativeDriver: true }),
-      Animated.timing(balancePulse, { toValue: 1, duration: 140, useNativeDriver: true }),
+      Animated.timing(balancePulse, { toValue: 1.015, duration: 100, useNativeDriver: true }),
+      Animated.timing(balancePulse, { toValue: 1, duration: 120, useNativeDriver: true }),
     ]).start();
-  }, [wallet?.balance, wallet?.savings_balance, balancePulse, wallet]);
+  }, [wallet?.balance, balancePulse, wallet]);
 
   async function onTopup() {
     const a = num(amount);
@@ -158,10 +209,31 @@ export function WalletScreen() {
         ['autexa:mm_phone', phone.trim()],
         ['autexa:mm_provider', provider],
       ]);
+      setModal(null);
       Alert.alert('Top-up', res.message);
       setPollingTopupId(res.topupRequestId);
     } catch (e) {
       const msg = e instanceof AutexaApiError ? e.message : 'Top-up failed';
+      Alert.alert('Top-up', msg);
+    } finally {
+      setTopupBusy(false);
+    }
+  }
+
+  async function onCardTopup() {
+    const a = num(amount);
+    if (!Number.isFinite(a)) {
+      Alert.alert('Top-up', 'Enter a valid amount.');
+      return;
+    }
+    try {
+      setTopupBusy(true);
+      const res = await requestWalletCardTopup({ amount: a });
+      if (!res.url) throw new Error('Card checkout unavailable');
+      setModal(null);
+      await WebBrowser.openBrowserAsync(res.url);
+    } catch (e) {
+      const msg = e instanceof AutexaApiError ? e.message : e instanceof Error ? e.message : 'Card top-up failed';
       Alert.alert('Top-up', msg);
     } finally {
       setTopupBusy(false);
@@ -181,8 +253,10 @@ export function WalletScreen() {
     try {
       setWithdrawBusy(true);
       const res = await requestWalletWithdraw({ amount: a, phone: phone.trim(), provider });
+      setModal(null);
       Alert.alert('Withdrawal', res.message);
       void loadWallet();
+      void refreshTxPreview();
     } catch (e) {
       const msg = e instanceof AutexaApiError ? e.message : 'Withdrawal failed';
       Alert.alert('Withdrawal', msg);
@@ -191,259 +265,211 @@ export function WalletScreen() {
     }
   }
 
-  async function onMoveToSavings() {
-    const a = num(amount);
-    if (!Number.isFinite(a)) {
-      Alert.alert('Savings', 'Enter a valid amount.');
-      return;
-    }
-    try {
-      setSavingsBusy(true);
-      await depositToSavings({ amount: a, description: 'Move to savings' });
-      Alert.alert('Savings', `Moved ${fmtMoney(a, currency)} to savings.`);
-      void loadWallet();
-    } catch (e) {
-      const msg = e instanceof AutexaApiError ? e.message : 'Savings deposit failed';
-      Alert.alert('Savings', msg);
-    } finally {
-      setSavingsBusy(false);
-    }
-  }
-
-  async function onMoveToWallet() {
-    const a = num(amount);
-    if (!Number.isFinite(a)) {
-      Alert.alert('Savings', 'Enter a valid amount.');
-      return;
-    }
-    try {
-      setSavingsBusy(true);
-      await withdrawFromSavings({ amount: a, description: 'Move to wallet' });
-      Alert.alert('Savings', `Moved ${fmtMoney(a, currency)} to wallet.`);
-      void loadWallet();
-    } catch (e) {
-      const msg = e instanceof AutexaApiError ? e.message : 'Savings withdraw failed';
-      Alert.alert('Savings', msg);
-    } finally {
-      setSavingsBusy(false);
-    }
+  function openTransfer() {
+    (navigation as { navigate: (n: string) => void }).navigate('WalletTransfers');
   }
 
   return (
-    <ScreenScroll edges={['top', 'left', 'right']}>
+    <ScreenScroll edges={['top', 'left', 'right']} contentContainerStyle={styles.scrollPad}>
       <Animated.View style={{ opacity: enterOpacity, transform: [{ translateY: enterY }] }}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.title}>Wallet</Text>
-            <Text style={styles.subtitle}>Track balance, savings, and challenges.</Text>
-          </View>
-        </View>
+        <Text style={styles.screenTitle}>Wallet</Text>
       </Animated.View>
+
       {!isAutexaApiConfigured() ? (
         <Card style={styles.card}>
-          <Text style={styles.muted}>Set EXPO_PUBLIC_AUTEXA_API_URL to use your Autexa wallet from this build.</Text>
+          <Text style={styles.muted}>Set EXPO_PUBLIC_AUTEXA_API_URL to use your wallet from this build.</Text>
         </Card>
       ) : null}
 
-      {loading ? (
+      {loadError && !loading ? (
+        <Card style={styles.card}>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <PrimaryButton title="Retry" onPress={() => void loadWallet()} style={styles.retryBtn} />
+        </Card>
+      ) : null}
+
+      {loading && !wallet ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
-      ) : wallet ? (
-        <Animated.View style={{ transform: [{ scale: balancePulse }] }}>
-          <Card style={styles.balanceCard}>
-            <View style={styles.balanceTopRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.balanceLabel}>Total</Text>
-                <Text style={styles.balanceValue}>{fmtMoney(total, currency)}</Text>
-              </View>
-              <View style={styles.pills}>
-                <View style={styles.pill}>
-                  <Text style={styles.pillLabel}>Wallet</Text>
-                  <Text style={styles.pillValue}>{fmtMoney(balance, currency)}</Text>
-                </View>
-                <View style={styles.pill}>
-                  <Text style={styles.pillLabel}>Savings</Text>
-                  <Text style={styles.pillValue}>{fmtMoney(savings, currency)}</Text>
-                </View>
-              </View>
-            </View>
-          {locked ? (
-            <View style={styles.lockBanner}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.danger} />
-              <Text style={styles.lockText}>
-                Wallet locked{wallet.locked_reason ? `: ${wallet.locked_reason}` : ''}
-              </Text>
-            </View>
-          ) : null}
-          </Card>
-        </Animated.View>
       ) : null}
 
-      <Pressable
-        style={styles.historyRow}
-        onPress={() => navigation.navigate('WalletTransactions')}
-        disabled={!isAutexaApiConfigured()}
-      >
-        <Ionicons name="receipt-outline" size={22} color={colors.text} />
-        <Text style={styles.historyLabel}>Transaction history</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Pressable>
-      <Pressable
-        style={styles.historyRow}
-        onPress={() => navigation.navigate('WalletPayees')}
-        disabled={!isAutexaApiConfigured()}
-      >
-        <Ionicons name="people-outline" size={22} color={colors.text} />
-        <Text style={styles.historyLabel}>Saved payees</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Pressable>
-      <Pressable
-        style={styles.historyRow}
-        onPress={() => navigation.navigate('WalletPaymentLinks')}
-        disabled={!isAutexaApiConfigured()}
-      >
-        <Ionicons name="link-outline" size={22} color={colors.text} />
-        <Text style={styles.historyLabel}>Payment links</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Pressable>
-      <Pressable
-        style={styles.historyRow}
-        onPress={() => navigation.navigate('SavingsChallenges')}
-        disabled={!isAutexaApiConfigured()}
-      >
-        <Ionicons name="trophy-outline" size={22} color={colors.text} />
-        <Text style={styles.historyLabel}>Savings challenges</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </Pressable>
+      {wallet ? (
+        <>
+          <Animated.View style={{ transform: [{ scale: balancePulse }] }}>
+            <Card style={styles.heroCard}>
+              <Text style={styles.heroLabel}>Balance</Text>
+              <Text style={styles.heroAmount}>{fmtMoney(balance, currency)}</Text>
+              {savings > 0 ? (
+                <Text style={styles.heroSavings}>Savings · {fmtMoney(savings, currency)}</Text>
+              ) : (
+                <Text style={styles.heroSavingsMuted}>Savings · {fmtMoney(0, currency)}</Text>
+              )}
+              {locked ? (
+                <View style={styles.lockBanner}>
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.danger} />
+                  <Text style={styles.lockText}>
+                    Locked{wallet.locked_reason ? `: ${wallet.locked_reason}` : ''}
+                  </Text>
+                </View>
+              ) : null}
+            </Card>
+          </Animated.View>
 
-      <Text style={styles.section}>Savings</Text>
-      <Card>
-        <Text style={styles.hint}>Move money between Wallet and Savings.</Text>
-        <TextField
-          label="Amount (UGX)"
-          keyboardType="number-pad"
-          placeholder="e.g. 50000"
-          value={amount}
-          onChangeText={setAmount}
-          editable={!locked}
-        />
-        <PrimaryButton
-          title="Move to savings"
-          onPress={() => void onMoveToSavings()}
-          loading={savingsBusy}
-          disabled={locked || topupBusy || withdrawBusy || !isAutexaApiConfigured()}
-        />
-        <PrimaryButton
-          title="Move to wallet"
-          variant="outline"
-          onPress={() => void onMoveToWallet()}
-          loading={savingsBusy}
-          disabled={locked || topupBusy || withdrawBusy || !isAutexaApiConfigured()}
-          style={styles.btnSpacer}
-        />
-      </Card>
-
-      <Text style={styles.section}>Mobile money</Text>
-      <Card>
-        <Text style={styles.hint}>
-          Top-ups and withdrawals go through Flutterwave (Uganda mobile money). Use the same number registered on your MTN or Airtel wallet.
-        </Text>
-        <ProviderToggle value={provider} onChange={setProvider} disabled={locked || topupBusy || withdrawBusy} />
-        <TextField
-          label="Phone number"
-          keyboardType="phone-pad"
-          placeholder="256…"
-          value={phone}
-          onChangeText={setPhone}
-          editable={!locked}
-        />
-        <PrimaryButton
-          title="Request top-up"
-          onPress={() => void onTopup()}
-          loading={topupBusy}
-          disabled={locked || savingsBusy || !isAutexaApiConfigured()}
-        />
-        <PrimaryButton
-          title="Withdraw to phone"
-          variant="outline"
-          onPress={() => void onWithdraw()}
-          loading={withdrawBusy}
-          disabled={locked || savingsBusy || !isAutexaApiConfigured()}
-          style={styles.btnSpacer}
-        />
-        {pollingTopupId ? (
-          <View style={styles.polling}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.pollingText}>Waiting for mobile money confirmation…</Text>
+          <View style={styles.iconRow}>
+            <Pressable
+              style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
+              onPress={() => !locked && setModal('deposit')}
+              disabled={locked || !isAutexaApiConfigured()}
+              accessibilityRole="button"
+              accessibilityLabel="Deposit"
+            >
+              <Ionicons name="arrow-down-circle" size={32} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
+              onPress={() => !locked && setModal('withdraw')}
+              disabled={locked || !isAutexaApiConfigured()}
+              accessibilityRole="button"
+              accessibilityLabel="Withdraw"
+            >
+              <Ionicons name="arrow-up-circle" size={32} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
+              onPress={() => !locked && openTransfer()}
+              disabled={locked || !isAutexaApiConfigured()}
+              accessibilityRole="button"
+              accessibilityLabel="Transfer"
+            >
+              <Ionicons name="swap-horizontal" size={30} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
+              onPress={() => !locked && setModal('card')}
+              disabled={locked || !isAutexaApiConfigured()}
+              accessibilityRole="button"
+              accessibilityLabel="Card payment"
+            >
+              <Ionicons name="card" size={28} color={colors.primary} />
+            </Pressable>
           </View>
-        ) : null}
-      </Card>
 
-      <Text style={styles.section}>Pay via chat</Text>
-      <Card>
-        <Text style={styles.muted}>
-          Ask Autexa for your balance, transaction history, saved payees, wallet-to-wallet sends, mobile-money
-          withdrawals (after you confirm), or to remember a short wallet note for next time.
-        </Text>
-      </Card>
+          {pollingTopupId ? (
+            <View style={styles.polling}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.pollingText}>Waiting for mobile money confirmation…</Text>
+            </View>
+          ) : null}
+
+          <Text style={styles.section}>Transactions</Text>
+          {txLoading && !txRows.length ? (
+            <View style={styles.txLoading}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : txRows.length === 0 ? (
+            <Card>
+              <Text style={styles.muted}>No activity yet. Deposit to get started.</Text>
+            </Card>
+          ) : (
+            <Card style={styles.txCard}>
+              {txRows.map((item, i) => (
+                <View key={item.id}>
+                  {i > 0 ? <View style={styles.txDivider} /> : null}
+                  <View style={styles.txRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.txType}>{item.type.replace(/_/g, ' ')}</Text>
+                      {item.description ? <Text style={styles.txDesc}>{item.description}</Text> : null}
+                      <Text style={styles.txDate}>{new Date(item.created_at).toLocaleString()}</Text>
+                    </View>
+                    <Text style={styles.txAmt}>{fmtTxAmount(item)}</Text>
+                  </View>
+                </View>
+              ))}
+              <Pressable
+                style={styles.seeAll}
+                onPress={() => (navigation as { navigate: (n: string) => void }).navigate('WalletTransactions')}
+              >
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+              </Pressable>
+            </Card>
+          )}
+        </>
+      ) : null}
+
+      <Modal visible={modal != null} transparent animationType="fade">
+        <Pressable style={styles.modalBackdrop} onPress={() => !topupBusy && !withdrawBusy && setModal(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>
+              {modal === 'deposit' ? 'Deposit' : modal === 'withdraw' ? 'Withdraw' : 'Card top-up'}
+            </Text>
+            <TextField
+              label="Amount (UGX)"
+              keyboardType="number-pad"
+              placeholder="e.g. 50000"
+              value={amount}
+              onChangeText={setAmount}
+            />
+            {modal !== 'card' ? (
+              <TextField
+                label="Phone number"
+                keyboardType="phone-pad"
+                placeholder="256…"
+                value={phone}
+                onChangeText={setPhone}
+              />
+            ) : null}
+            {modal === 'deposit' ? (
+              <PrimaryButton title="Continue" onPress={() => void onTopup()} loading={topupBusy} />
+            ) : null}
+            {modal === 'withdraw' ? (
+              <PrimaryButton title="Withdraw" onPress={() => void onWithdraw()} loading={withdrawBusy} />
+            ) : null}
+            {modal === 'card' ? (
+              <PrimaryButton title="Pay with card" onPress={() => void onCardTopup()} loading={topupBusy} />
+            ) : null}
+            <PrimaryButton
+              title="Cancel"
+              variant="outline"
+              onPress={() => !topupBusy && !withdrawBusy && setModal(null)}
+              style={styles.modalCancel}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenScroll>
   );
 }
 
-function ProviderToggle({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: MomoProvider;
-  onChange: (p: MomoProvider) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={styles.toggleRow}>
-      {(['mtn', 'airtel'] as const).map((p) => {
-        const active = value === p;
-        return (
-          <Pressable
-            key={p}
-            disabled={disabled}
-            onPress={() => onChange(p)}
-            style={[styles.toggleChip, active && styles.toggleChipActive, disabled && styles.toggleDisabled]}
-          >
-            <Text style={[styles.toggleText, active && styles.toggleTextActive]}>{p === 'mtn' ? 'MTN' : 'Airtel'}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.md },
-  title: {
-    fontSize: 28,
+  scrollPad: { paddingBottom: spacing.xxl },
+  screenTitle: {
+    fontSize: 22,
     fontWeight: '800',
     color: colors.text,
+    marginBottom: spacing.sm,
   },
-  subtitle: { marginTop: spacing.xs, fontSize: 13, color: colors.textMuted },
   card: { marginBottom: spacing.md },
-  center: { paddingVertical: spacing.xl, alignItems: 'center' },
-  balanceCard: { marginBottom: spacing.md },
-  balanceLabel: { fontSize: 14, color: colors.textSecondary, fontWeight: '600' },
-  balanceValue: { fontSize: 32, fontWeight: '800', color: colors.text, marginTop: spacing.xs },
-  balanceTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  pills: { gap: spacing.sm },
-  pill: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 14,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: 'rgba(23,94,163,0.22)',
+  center: { paddingVertical: spacing.lg, alignItems: 'center' },
+  errorText: { fontSize: 14, color: colors.danger, marginBottom: spacing.sm },
+  retryBtn: { marginTop: spacing.xs },
+  muted: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  heroCard: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
-  pillLabel: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
-  pillValue: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, marginTop: 2 },
+  heroLabel: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase' },
+  heroAmount: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: colors.text,
+    marginTop: spacing.sm,
+    letterSpacing: -0.5,
+  },
+  heroSavings: { fontSize: 14, fontWeight: '600', color: colors.primaryDark, marginTop: spacing.sm },
+  heroSavingsMuted: { fontSize: 14, color: colors.textMuted, marginTop: spacing.sm },
   lockBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -452,17 +478,28 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
+    alignSelf: 'stretch',
   },
   lockText: { flex: 1, color: colors.danger, fontSize: 14, fontWeight: '600' },
-  historyRow: {
+  iconRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.lg,
   },
-  historyLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(23,94,163,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircleDisabled: { opacity: 0.45 },
+  polling: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  pollingText: { flex: 1, fontSize: 14, color: colors.textSecondary },
   section: {
     fontSize: 13,
     fontWeight: '700',
@@ -470,28 +507,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
-    marginTop: spacing.sm,
   },
-  hint: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md },
-  muted: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
-  toggleRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  toggleChip: {
+  txLoading: { paddingVertical: spacing.lg, alignItems: 'center' },
+  txCard: { paddingVertical: spacing.sm },
+  txDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
+  txRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  txType: { fontSize: 15, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
+  txDesc: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  txDate: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
+  txAmt: { fontSize: 15, fontWeight: '800', color: colors.text },
+  seeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  seeAllText: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  modalBackdrop: {
     flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
   },
-  toggleChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryMuted,
-  },
-  toggleDisabled: { opacity: 0.5 },
-  toggleText: { fontSize: 15, fontWeight: '700', color: colors.textSecondary },
-  toggleTextActive: { color: colors.primary },
-  btnSpacer: { marginTop: spacing.sm },
-  polling: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-  pollingText: { flex: 1, fontSize: 14, color: colors.textSecondary },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  modalCancel: { marginTop: spacing.sm },
 });

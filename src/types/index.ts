@@ -99,6 +99,8 @@ export type AppStackParamList = {
   WalletTransactions: undefined;
   WalletPayees: undefined;
   WalletPaymentLinks: undefined;
+  WalletSavings: undefined;
+  WalletTransfers: undefined;
   SavingsChallenges: undefined;
   SavingsChallengeDetail: { challengeId: string };
 };
