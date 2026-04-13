@@ -1,5 +1,7 @@
 export function getApiBase(): string {
-  return (import.meta.env.VITE_AUTEXA_API_URL ?? '').replace(/\/$/, '');
+  let t = (import.meta.env.VITE_AUTEXA_API_URL ?? '').trim().replace(/\/+$/, '');
+  if (/\/api$/i.test(t)) t = t.replace(/\/api$/i, '').replace(/\/+$/, '');
+  return t;
 }
 
 export type PublicProviderRow = {

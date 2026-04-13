@@ -55,7 +55,15 @@ function readPublicEnv(name) {
   return '';
 }
 
-const autexaApiUrlForCleartext = readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL');
+function normalizeAutexaApiUrlBase(raw) {
+  let t = String(raw ?? '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (/\/api$/i.test(t)) t = t.replace(/\/api$/i, '').replace(/\/+$/, '');
+  return t;
+}
+
+const autexaApiUrlForCleartext = normalizeAutexaApiUrlBase(readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL'));
 /** Only allow HTTP (local dev); production HTTPS should not need cleartext. */
 const allowAndroidCleartext =
   typeof autexaApiUrlForCleartext === 'string' &&
@@ -109,7 +117,7 @@ module.exports = {
       supabaseUrl: readPublicEnv('EXPO_PUBLIC_SUPABASE_URL'),
       supabaseAnonKey: readPublicEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
       supportUserId: readPublicEnv('EXPO_PUBLIC_SUPPORT_USER_ID'),
-      autexaApiUrl: readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL'),
+      autexaApiUrl: normalizeAutexaApiUrlBase(readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL')),
       webAppUrl: readPublicEnv('EXPO_PUBLIC_WEB_APP_URL'),
     },
   },

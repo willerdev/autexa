@@ -1,6 +1,13 @@
 import { env, isAutexaApiConfigured } from '../config/env';
 import { supabase } from '../lib/supabase';
 
+/** Same joining rules as `autexaFetch` (path must start with `/api/...`). */
+export function autexaApiAbsoluteUrl(path: string): string {
+  const base = env.autexaApiUrl.replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
 export class AutexaApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -35,7 +42,7 @@ export async function autexaFetch<T>(
   if (!token) {
     throw new AutexaApiError('Not signed in', 401);
   }
-  const url = `${env.autexaApiUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = autexaApiAbsoluteUrl(path);
   const { json: jsonBody, ...rest } = init;
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -66,6 +73,12 @@ export async function autexaFetch<T>(
         msg = p.answer.trim();
       }
     }
+    if (/<!DOCTYPE\s+html/i.test(msg) || /<html[\s>]/i.test(msg)) {
+      msg = shortenNonJsonErrorBody(text, res.status);
+    }
+    if (res.status === 404 && /^not found$/i.test(msg.trim())) {
+      msg = `API returned 404 for ${path}. Use EXPO_PUBLIC_AUTEXA_API_URL as the server root only (e.g. https://your-api.onrender.com), not …/api. If the URL is correct, redeploy the Node API from the latest GitHub main.`;
+    }
     throw new AutexaApiError(msg, res.status);
   }
   return parsed as T;
@@ -79,7 +92,7 @@ export async function autexaPublicFetch<T>(
   if (!isAutexaApiConfigured()) {
     throw new AutexaApiError('Autexa API URL is not configured (EXPO_PUBLIC_AUTEXA_API_URL).', 0);
   }
-  const url = `${env.autexaApiUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = autexaApiAbsoluteUrl(path);
   const { json: jsonBody, ...rest } = init;
   const headers: Record<string, string> = {
     Accept: 'application/json',
@@ -105,6 +118,9 @@ export async function autexaPublicFetch<T>(
     }
     if (/<!DOCTYPE\s+html/i.test(msg) || /<html[\s>]/i.test(msg)) {
       msg = shortenNonJsonErrorBody(text, res.status);
+    }
+    if (res.status === 404 && /^not found$/i.test(msg.trim())) {
+      msg = `API returned 404 for ${path}. Use EXPO_PUBLIC_AUTEXA_API_URL as the server root only (e.g. https://your-api.onrender.com), not …/api. If the URL is correct, redeploy the Node API from the latest GitHub main.`;
     }
     throw new AutexaApiError(msg, res.status);
   }

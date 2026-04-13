@@ -17,13 +17,16 @@ export default defineConfig(({ mode }) => {
   // Unprefixed keys from .env (server-style copies often set PUBLIC_API_BASE_URL, not VITE_AUTEXA_API_URL)
   const bareSrc = loadEnv(mode, path.join(__dirname, 'src'), '');
   const bareRoot = loadEnv(mode, __dirname, '');
-  const apiFallback = String(
+  let apiFallback = String(
     bareRoot.EXPO_PUBLIC_AUTEXA_API_URL ||
       bareSrc.EXPO_PUBLIC_AUTEXA_API_URL ||
       bareRoot.PUBLIC_API_BASE_URL ||
       bareSrc.PUBLIC_API_BASE_URL ||
       '',
-  ).replace(/\/$/, '');
+  )
+    .trim()
+    .replace(/\/+$/, '');
+  if (/\/api$/i.test(apiFallback)) apiFallback = apiFallback.replace(/\/api$/i, '').replace(/\/+$/, '');
 
   const define: Record<string, string> = {};
   for (const [key, value] of Object.entries(merged)) {

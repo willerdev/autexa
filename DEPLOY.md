@@ -76,7 +76,7 @@ The server listens on `0.0.0.0` so it works inside containers.
 
    - `EXPO_PUBLIC_SUPABASE_URL`
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-   - `EXPO_PUBLIC_AUTEXA_API_URL` (e.g. `https://your-api.onrender.com`)
+   - `EXPO_PUBLIC_AUTEXA_API_URL` — the API **origin only** (e.g. `https://your-api.onrender.com`). Do **not** append `/api`; the app requests paths like `/api/wallet` itself. A value ending in `/api` causes every call to 404 (`/api/api/...`).
    - Optional: `EXPO_PUBLIC_WEB_APP_URL` (payment links in browser), `EXPO_PUBLIC_SUPPORT_USER_ID`
 
    Example (adjust profile/environment flags to match your Expo account):

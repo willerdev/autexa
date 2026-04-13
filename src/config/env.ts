@@ -30,7 +30,11 @@ type Extra = {
 };
 
 function normalizeAutexaApiUrl(url: string): string {
-  const t = stripOuterQuotes(trimEnv(url)).replace(/\/$/, '');
+  let t = stripOuterQuotes(trimEnv(url)).replace(/\/+$/, '');
+  /** App paths always start with `/api/...`. A trailing `/api` here becomes `/api/api/...` → 404 everywhere. */
+  if (/\/api$/i.test(t)) {
+    t = t.replace(/\/api$/i, '').replace(/\/+$/, '');
+  }
   if (!t) return '';
 
   // Dev convenience: map hostnames correctly per simulator/emulator only.
