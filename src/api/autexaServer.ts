@@ -17,6 +17,20 @@ export class AutexaApiError extends Error {
 }
 
 /** When the host returns Express/HTML instead of JSON (wrong URL or stale deploy). */
+/** Shown when the remote returns a generic 404 — almost always wrong API host or stale deploy. */
+function wrongApiHostMessage(path: string): string {
+  const base = env.autexaApiUrl.replace(/\/$/, '');
+  const healthUrl = `${base}/health`;
+  let host = '';
+  try {
+    const u = new URL(/^https?:\/\//i.test(base) ? base : `https://${base}`);
+    host = u.host;
+  } catch {
+    host = '(invalid EXPO_PUBLIC_AUTEXA_API_URL)';
+  }
+  return `API returned 404 for ${path}. This app build calls host "${host}". Open ${healthUrl} in a browser — you should see JSON like {"ok":true,"service":"autexa-api"}. If that page is not JSON or is missing, change EXPO_PUBLIC_AUTEXA_API_URL in EAS (project → Environment variables → production) to your Node API root (no /api suffix) and run a new Android build. If /health is correct but ${path} still 404s, redeploy the API from GitHub main (Render/Fly) so the latest server code is live.`;
+}
+
 function shortenNonJsonErrorBody(text: string, status: number): string {
   const t = text.trim();
   if (!t) return `Request failed (${status})`;
@@ -77,7 +91,7 @@ export async function autexaFetch<T>(
       msg = shortenNonJsonErrorBody(text, res.status);
     }
     if (res.status === 404 && /^not found$/i.test(msg.trim())) {
-      msg = `API returned 404 for ${path}. Use EXPO_PUBLIC_AUTEXA_API_URL as the server root only (e.g. https://your-api.onrender.com), not …/api. If the URL is correct, redeploy the Node API from the latest GitHub main.`;
+      msg = wrongApiHostMessage(path);
     }
     throw new AutexaApiError(msg, res.status);
   }
@@ -120,7 +134,7 @@ export async function autexaPublicFetch<T>(
       msg = shortenNonJsonErrorBody(text, res.status);
     }
     if (res.status === 404 && /^not found$/i.test(msg.trim())) {
-      msg = `API returned 404 for ${path}. Use EXPO_PUBLIC_AUTEXA_API_URL as the server root only (e.g. https://your-api.onrender.com), not …/api. If the URL is correct, redeploy the Node API from the latest GitHub main.`;
+      msg = wrongApiHostMessage(path);
     }
     throw new AutexaApiError(msg, res.status);
   }

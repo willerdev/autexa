@@ -195,6 +195,15 @@ app.post('/api/payments/mobile-money-placeholder', (_req, res) => {
   });
 });
 
+/** JSON 404 so clients never mistake another host’s HTML “Not Found” for this API. */
+app.use((req, res) => {
+  res.status(404).json({
+    error: `No route for ${req.method} ${req.originalUrl}`,
+    service: 'autexa-api',
+    hint: 'GET /health should return {"ok":true,"service":"autexa-api"}. If you expected this path, redeploy the API from the latest main branch.',
+  });
+});
+
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
