@@ -457,19 +457,22 @@ estimated_total is in major currency units (e.g. USD dollars); server converts t
   },
   {
     name: 'withdraw_to_mobile_money',
-    description: `Withdraws UGX from the Autexa wallet to the user's Uganda mobile money account via Flutterwave. High impact: always confirm amount, full phone number, and network (mtn or airtel); user_confirmed: true only after clear yes. Check balance first.`,
+    description: `Withdraws UGX from the Autexa wallet to the user's Uganda mobile money account via Flutterwave. High impact: confirm amount and full phone number; for network use mtn, airtel, or auto (auto infers MTN/Airtel from the number prefix). user_confirmed: true only after clear yes. Check balance first.`,
     parameters: objectSchema(
       {
         user_id: { type: SchemaType.STRING, description: 'Authenticated user UUID' },
         amount: { type: SchemaType.NUMBER, description: 'UGX to receive on phone (fees apply)' },
         phone: { type: SchemaType.STRING, description: 'Mobile money MSISDN e.g. 256...' },
-        provider: { type: SchemaType.STRING, description: 'mtn or airtel', enum: ['mtn', 'airtel'] },
+        provider: {
+          type: SchemaType.STRING,
+          description: 'mtn, airtel, or auto (default — inferred from Uganda number prefix when possible)',
+        },
         user_confirmed: {
           type: SchemaType.BOOLEAN,
           description: 'True only after explicit confirmation.',
         },
       },
-      ['user_id', 'amount', 'phone', 'provider', 'user_confirmed'],
+      ['user_id', 'amount', 'phone', 'user_confirmed'],
     ),
   },
   {
@@ -1386,14 +1389,19 @@ export const TOOL_EXECUTORS = {
     if (!user_confirmed) {
       return {
         error:
-          'Not confirmed. Repeat amount, phone number, and network (mtn or airtel); ask for explicit yes, then call with user_confirmed: true.',
+          'Not confirmed. Repeat amount, phone number, and network (mtn, airtel, or auto); ask for explicit yes, then call with user_confirmed: true.',
       };
+    }
+    let p = provider != null && String(provider).trim() !== '' ? String(provider).toLowerCase() : 'auto';
+    if (p !== 'mtn' && p !== 'airtel') {
+      const inferred = walletService.inferUgandaMomoProviderFromPhone(phone);
+      p = inferred || 'auto';
     }
     return walletService.initiateWithdrawal({
       userId: user_id,
       amount: Number(amount),
       phone: String(phone),
-      provider: String(provider).toLowerCase(),
+      provider: p,
     });
   },
 

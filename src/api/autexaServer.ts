@@ -9,6 +9,20 @@ export class AutexaApiError extends Error {
   }
 }
 
+/** When the host returns Express/HTML instead of JSON (wrong URL or stale deploy). */
+function shortenNonJsonErrorBody(text: string, status: number): string {
+  const t = text.trim();
+  if (!t) return `Request failed (${status})`;
+  const cannot = t.match(/Cannot (GET|POST|PUT|PATCH|DELETE)\s+(\S+)/i);
+  if (cannot) {
+    return `This server does not support ${cannot[2]} (${cannot[1]}). Check EXPO_PUBLIC_AUTEXA_API_URL and deploy the latest API.`;
+  }
+  if (/^<!DOCTYPE html/i.test(t) || /<html[\s>]/i.test(t)) {
+    return `Server returned HTML instead of JSON (${status}). Check EXPO_PUBLIC_AUTEXA_API_URL points at the Autexa Node API.`;
+  }
+  return t.length > 800 ? `${t.slice(0, 400)}…` : t;
+}
+
 export async function autexaFetch<T>(
   path: string,
   init: RequestInit & { json?: unknown } = {},
@@ -88,6 +102,9 @@ export async function autexaPublicFetch<T>(
     let msg = text || res.statusText;
     if (typeof parsed === 'object' && parsed !== null && typeof (parsed as { error?: string }).error === 'string') {
       msg = (parsed as { error: string }).error.trim();
+    }
+    if (/<!DOCTYPE\s+html/i.test(msg) || /<html[\s>]/i.test(msg)) {
+      msg = shortenNonJsonErrorBody(text, res.status);
     }
     throw new AutexaApiError(msg, res.status);
   }

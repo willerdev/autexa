@@ -1,7 +1,10 @@
 export function getErrorMessage(error: unknown): string {
   if (!error) return 'Something went wrong.';
   if (typeof error === 'string') return error;
-  const e = error as { message?: string; error_description?: string };
+  const e = error as { name?: string; message?: string; error_description?: string };
+  if (e.name === 'AbortError') {
+    return 'The request took too long and was cancelled. Try again with a shorter message.';
+  }
   if (e.message) return e.message;
   if (typeof e.error_description === 'string') return e.error_description;
   return 'Something went wrong. Please try again.';

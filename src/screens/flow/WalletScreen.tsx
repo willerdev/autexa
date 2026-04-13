@@ -25,9 +25,8 @@ import {
 } from '../../api/wallet';
 import { Card, PrimaryButton, ScreenScroll, TextField } from '../../components';
 import { isAutexaApiConfigured } from '../../config/env';
+import { resolveWalletMomoProvider } from '../../lib/ugandaMomo';
 import { colors, radius, spacing } from '../../theme';
-
-type MomoProvider = 'auto';
 
 function num(v: string) {
   const n = Number(String(v).replace(/,/g, '').trim());
@@ -53,7 +52,6 @@ export function WalletScreen() {
   const [txLoading, setTxLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
-  const [provider] = useState<MomoProvider>('auto');
   const [topupBusy, setTopupBusy] = useState(false);
   const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [savingsBusy, setSavingsBusy] = useState(false);
@@ -205,10 +203,11 @@ export function WalletScreen() {
     }
     try {
       setTopupBusy(true);
-      const res = await requestWalletTopup({ amount: a, phone: phone.trim(), provider });
+      const mmProvider = resolveWalletMomoProvider(phone.trim(), 'auto');
+      const res = await requestWalletTopup({ amount: a, phone: phone.trim(), provider: mmProvider });
       await AsyncStorage.multiSet([
         ['autexa:mm_phone', phone.trim()],
-        ['autexa:mm_provider', provider],
+        ['autexa:mm_provider', mmProvider],
       ]);
       setModal(null);
       Alert.alert('Top-up', res.message);
@@ -233,7 +232,11 @@ export function WalletScreen() {
     }
     try {
       setWithdrawBusy(true);
-      const res = await requestWalletWithdraw({ amount: a, phone: phone.trim(), provider });
+      const res = await requestWalletWithdraw({
+        amount: a,
+        phone: phone.trim(),
+        provider: resolveWalletMomoProvider(phone.trim(), 'auto'),
+      });
       setModal(null);
       Alert.alert('Withdrawal', res.message);
       void loadWallet();

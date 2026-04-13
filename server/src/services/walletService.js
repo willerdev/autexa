@@ -13,6 +13,24 @@ function stubPayments() {
   return process.env.WALLET_PAYMENTS_STUB === '1';
 }
 
+/**
+ * Best-effort MTN vs Airtel from Uganda MSISDN (0XXXXXXXXX, 256…, +256…).
+ * @returns {'mtn'|'airtel'|null}
+ */
+export function inferUgandaMomoProviderFromPhone(phone) {
+  const digits = String(phone ?? '').replace(/\D/g, '');
+  let nsn = digits;
+  if (digits.startsWith('256')) nsn = digits.slice(3);
+  else if (digits.startsWith('0')) nsn = digits.slice(1);
+  if (nsn.length < 9) return null;
+  const pre = nsn.slice(0, 3);
+  const mtn = new Set(['031', '039', '076', '077', '078', '079']);
+  const airtel = new Set(['070', '074', '075']);
+  if (mtn.has(pre)) return 'mtn';
+  if (airtel.has(pre)) return 'airtel';
+  return null;
+}
+
 async function getUserEmailForPayments(userId) {
   const { data } = await sb().from('users').select('email').eq('id', userId).maybeSingle();
   const e = String(data?.email ?? '').trim();
@@ -212,8 +230,12 @@ export async function initiateTopup({ userId, amount, phone, provider, paymentLi
   if (!Number.isFinite(amt) || amt < 1000) throw new Error('Minimum top-up is 1,000 UGX');
   if (amt > 5_000_000) throw new Error('Maximum top-up is 5,000,000 UGX');
   const p = String(provider || '').toLowerCase();
-  const prov = p === 'auto' || !p ? null : p;
+  let prov = p === 'auto' || !p ? null : p;
   if (prov && prov !== 'mtn' && prov !== 'airtel') throw new Error('provider must be mtn, airtel, or auto');
+  if (!prov) {
+    const inferred = inferUgandaMomoProviderFromPhone(phone);
+    if (inferred) prov = inferred;
+  }
 
   await getWallet(userId);
   const externalId = crypto.randomUUID();
@@ -477,8 +499,12 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
   const fee = Math.round(amt * FEE_PCT * 100) / 100;
   const totalDeducted = amt + fee;
   const p = String(provider || '').toLowerCase();
-  const prov = p === 'auto' || !p ? null : p;
+  let prov = p === 'auto' || !p ? null : p;
   if (prov && prov !== 'mtn' && prov !== 'airtel') throw new Error('provider must be mtn, airtel, or auto');
+  if (!prov) {
+    const inferred = inferUgandaMomoProviderFromPhone(phone);
+    if (inferred) prov = inferred;
+  }
 
   const supabase = sb();
   const wallet = await getWallet(userId);
