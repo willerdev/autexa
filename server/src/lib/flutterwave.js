@@ -181,6 +181,15 @@ async function v4CreateCustomer({ email, fullname, phoneNational }) {
   });
 }
 
+async function v4FindCustomerByEmail(email) {
+  const e = String(email || '').trim();
+  if (!e) return null;
+  const body = await v4Request('get', `/customers?email=${encodeURIComponent(e)}&size=10`);
+  const list = body?.data?.content ?? body?.data?.items ?? (Array.isArray(body?.data) ? body.data : []);
+  const row = Array.isArray(list) ? list.find((c) => String(c?.email || '').toLowerCase() === e.toLowerCase()) : null;
+  return row || (Array.isArray(list) ? list[0] : null);
+}
+
 async function v4CreateUgMobileMoneyPaymentMethod({ network, phoneNational }) {
   return v4Request('post', '/payment-methods', {
     idempotencyKey: `pmd-mm-${network}-${phoneNational}-${randomUUID()}`,
@@ -234,11 +243,28 @@ export async function chargeUgandaMobileMoney({
     throw new Error('Invalid Uganda phone number');
   }
 
-  const cust = await v4CreateCustomer({
-    email,
-    fullname,
-    phoneNational,
-  });
+  let cust;
+  try {
+    cust = await v4CreateCustomer({
+      email,
+      fullname,
+      phoneNational,
+    });
+  } catch (e) {
+    const msg = String(e?.message || '');
+    // Flutterwave can return "Customer already exists" on /customers. Reuse the existing customer.
+    if (/customer already exists/i.test(msg) || /already exists/i.test(msg)) {
+      const existing = await v4FindCustomerByEmail(email);
+      if (existing?.id) {
+        cust = { data: { id: existing.id } };
+      } else {
+        throw e;
+      }
+    } else {
+      throw e;
+    }
+  }
+
   const customerId = cust?.data?.id;
   if (!customerId) throw new Error('Flutterwave did not return customer id');
 

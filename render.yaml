@@ -1,5 +1,7 @@
-# Render Blueprint — New → Blueprint → paste repo URL, or `render blueprint apply`
-# Set environment variables in the Render dashboard (secrets).
+# Render Blueprint — Dashboard: New → Blueprint → connect repo willerdev/autexa
+# Or: New → Web Service → Docker, Dockerfile path server/Dockerfile, context server
+# After first deploy, set PUBLIC_API_BASE_URL to your Render URL (e.g. https://autexa-api.onrender.com).
+# Mark all sync:false values as Secret in the Render UI.
 
 services:
   - type: web
@@ -26,7 +28,34 @@ services:
         value: gemini-flash-latest
       - key: PUBLIC_API_BASE_URL
         sync: false
+      # Flutterwave v4 (wallet + booking) — see server/.env.example
+      - key: FLUTTERWAVE_CLIENT_ID
+        sync: false
+      - key: FLUTTERWAVE_CLIENT_SECRET
+        sync: false
+      - key: FLUTTERWAVE_SANDBOX
+        sync: false
+      - key: FLUTTERWAVE_SECRET_HASH
+        sync: false
+      - key: FLUTTERWAVE_BOOKING_USD_TO_UGX
+        value: "3850"
+      - key: FLUTTERWAVE_WEBHOOK_SKIP_VERIFY
+        sync: false
+      # Optional
+      - key: EXPO_ACCESS_TOKEN
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: TWILIO_SMS_ENABLED
+        sync: false
+      # Legacy Stripe (disabled unless STRIPE_WEBHOOK_ENABLED=1)
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_WEBHOOK_ENABLED
         sync: false

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireUser } from '../lib/auth.js';
 import { createServiceClient } from '../lib/supabase.js';
 import { aiRankProviders, listProvidersAvailable } from '../lib/providers.js';
+import { notifyProviderInAppAndSms } from '../services/notifyChannels.js';
 
 export const bookingsRouter = Router();
 bookingsRouter.use(requireUser);
@@ -49,8 +50,8 @@ bookingsRouter.post('/auto-select', async (req, res) => {
     }
 
     const provider = providers.find((p) => p.id === providerId);
-    await sb.from('provider_notifications').insert({
-      provider_id: providerId,
+    await notifyProviderInAppAndSms(sb, {
+      providerId,
       title: 'New Autexa booking (auto)',
       body: `Booking ${booking.id} · ${serviceName ?? 'Service'} · ${date} ${time}`,
     });

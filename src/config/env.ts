@@ -26,6 +26,7 @@ type Extra = {
   supabaseAnonKey?: string;
   supportUserId?: string;
   autexaApiUrl?: string;
+  webAppUrl?: string;
 };
 
 function normalizeAutexaApiUrl(url: string): string {
@@ -78,6 +79,10 @@ export const env = {
   autexaApiUrl: normalizeAutexaApiUrl(
     trimEnv(process.env.EXPO_PUBLIC_AUTEXA_API_URL) || trimEnv(readExtra().autexaApiUrl) || '',
   ),
+  /** Public web origin for sharing payment links (e.g. https://app.autexa.com). */
+  webAppUrl: stripOuterQuotes(
+    trimEnv(process.env.EXPO_PUBLIC_WEB_APP_URL) || trimEnv(readExtra().webAppUrl) || '',
+  ).replace(/\/$/, ''),
 };
 
 export function isSupabaseConfigured(): boolean {

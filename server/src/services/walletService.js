@@ -70,7 +70,144 @@ export async function getWallet(userId) {
   return data;
 }
 
-export async function initiateTopup({ userId, amount, phone, provider }) {
+export async function depositToSavings({ userId, amount, description }) {
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) throw new Error('amount must be positive');
+  const supabase = sb();
+  const { data, error } = await supabase.rpc('transfer_wallet_to_savings', {
+    p_user_id: userId,
+    p_amount: amt,
+    p_description: description ? String(description) : null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function withdrawFromSavings({ userId, amount, description }) {
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) throw new Error('amount must be positive');
+  const supabase = sb();
+  const { data, error } = await supabase.rpc('transfer_savings_to_wallet', {
+    p_user_id: userId,
+    p_amount: amt,
+    p_description: description ? String(description) : null,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+function randomLinkSlug() {
+  return crypto.randomBytes(9).toString('base64url').replace(/=/g, '').slice(0, 12).toLowerCase();
+}
+
+export async function createPaymentLink({ ownerUserId, title, suggestedAmountUgx, expiresAt }) {
+  await getWallet(ownerUserId);
+  const ttl = expiresAt ? new Date(expiresAt) : null;
+  if (ttl && Number.isNaN(ttl.getTime())) throw new Error('Invalid expires_at');
+  const sug =
+    suggestedAmountUgx == null || suggestedAmountUgx === ''
+      ? null
+      : Number(suggestedAmountUgx);
+  if (sug != null && (!Number.isFinite(sug) || sug < 1000)) {
+    throw new Error('Suggested amount must be at least 1,000 UGX');
+  }
+  for (let i = 0; i < 10; i += 1) {
+    const slug = randomLinkSlug();
+    const { data, error } = await sb()
+      .from('wallet_payment_links')
+      .insert({
+        owner_user_id: ownerUserId,
+        slug,
+        title: title != null ? String(title).trim().slice(0, 120) || null : null,
+        suggested_amount_ugx: sug,
+        expires_at: ttl ? ttl.toISOString() : null,
+      })
+      .select('id, slug, title, suggested_amount_ugx, active, expires_at, created_at')
+      .single();
+    if (!error) return data;
+    if (error.code !== '23505') throw new Error(error.message);
+  }
+  throw new Error('Could not create a unique link');
+}
+
+export async function listPaymentLinks(ownerUserId) {
+  const { data, error } = await sb()
+    .from('wallet_payment_links')
+    .select('id, slug, title, suggested_amount_ugx, active, expires_at, created_at')
+    .eq('owner_user_id', ownerUserId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function setPaymentLinkActive(ownerUserId, linkId, active) {
+  const { data, error } = await sb()
+    .from('wallet_payment_links')
+    .update({ active: Boolean(active) })
+    .eq('id', linkId)
+    .eq('owner_user_id', ownerUserId)
+    .select('id, active')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Link not found');
+  return data;
+}
+
+/** Safe fields for guests (no PII). */
+export async function getPublicPaymentLinkBySlug(slug) {
+  const s = String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
+  if (!s || s.length > 64) return null;
+  const { data, error } = await sb()
+    .from('wallet_payment_links')
+    .select('slug, title, suggested_amount_ugx, active, expires_at')
+    .eq('slug', s)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data || !data.active) return null;
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
+  return {
+    slug: data.slug,
+    title: data.title,
+    suggested_amount_ugx: data.suggested_amount_ugx,
+    expires_at: data.expires_at,
+  };
+}
+
+export async function initiateGuestTopupForLink({ slug, amount, phone, provider }) {
+  const s = String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
+  if (!s) throw new Error('Invalid link');
+  const { data: link, error } = await sb()
+    .from('wallet_payment_links')
+    .select('id, owner_user_id, active, expires_at, suggested_amount_ugx')
+    .eq('slug', s)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!link || !link.active) throw new Error('This payment link is not valid');
+  if (link.expires_at && new Date(link.expires_at) < new Date()) {
+    throw new Error('This payment link has expired');
+  }
+  const amt = Number(amount);
+  const sug = link.suggested_amount_ugx != null ? Number(link.suggested_amount_ugx) : null;
+  if (sug != null && Number.isFinite(sug) && sug >= 1000 && amt !== sug) {
+    throw new Error(`This link requires exactly ${Math.round(sug).toLocaleString()} UGX`);
+  }
+  return initiateTopup({
+    userId: link.owner_user_id,
+    amount: amt,
+    phone,
+    provider,
+    paymentLinkId: link.id,
+  });
+}
+
+export async function initiateTopup({ userId, amount, phone, provider, paymentLinkId = null }) {
   const amt = Number(amount);
   if (!Number.isFinite(amt) || amt < 1000) throw new Error('Minimum top-up is 1,000 UGX');
   if (amt > 5_000_000) throw new Error('Maximum top-up is 5,000,000 UGX');
@@ -80,15 +217,18 @@ export async function initiateTopup({ userId, amount, phone, provider }) {
   await getWallet(userId);
   const externalId = crypto.randomUUID();
 
+  const insertRow = {
+    user_id: userId,
+    amount: amt,
+    phone: String(phone).trim(),
+    provider: p,
+    external_reference: externalId,
+  };
+  if (paymentLinkId) insertRow.payment_link_id = paymentLinkId;
+
   const { data: topupRequest, error: insErr } = await sb()
     .from('topup_requests')
-    .insert({
-      user_id: userId,
-      amount: amt,
-      phone: String(phone).trim(),
-      provider: p,
-      external_reference: externalId,
-    })
+    .insert(insertRow)
     .select('id')
     .single();
   if (insErr) throw new Error(insErr.message);
@@ -177,6 +317,88 @@ export async function checkTopupStatus({ topupRequestId, userId }) {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!request) throw new Error('Top-up request not found');
+
+  if (request.status === 'success') {
+    return { status: 'success', already_credited: true };
+  }
+  if (request.status === 'failed') {
+    return { status: 'failed', reason: 'Payment was declined or failed' };
+  }
+  if (new Date() > new Date(request.expires_at)) {
+    await supabase.from('topup_requests').update({ status: 'expired' }).eq('id', request.id).eq('status', 'pending');
+    return { status: 'expired' };
+  }
+
+  if (stubPayments()) {
+    const { data: locked } = await supabase
+      .from('topup_requests')
+      .update({ status: 'success', completed_at: new Date().toISOString() })
+      .eq('id', request.id)
+      .eq('status', 'pending')
+      .select('id, amount, phone, provider, external_reference')
+      .maybeSingle();
+    if (locked) {
+      await creditWallet({
+        userId,
+        amount: request.amount,
+        description: `Top-up via Flutterwave (${request.provider.toUpperCase()})`,
+        paymentMethod: 'flutterwave',
+        momoPhone: request.phone,
+        momoProvider: request.provider,
+        momoReference: request.external_reference,
+      });
+      return { status: 'success', amount: request.amount };
+    }
+    return { status: 'success', already_credited: true };
+  }
+
+  try {
+    const verified = await flutterwave.verifyTransactionByTxRef(request.external_reference);
+    const d = verified?.data;
+    const st = String(d?.status || d?.processor_response || '').toLowerCase();
+    const isSuccess = st === 'successful' || st === 'success' || st === 'succeeded';
+
+    if (isSuccess) {
+      const { data: locked } = await supabase
+        .from('topup_requests')
+        .update({ status: 'success', completed_at: new Date().toISOString() })
+        .eq('id', request.id)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle();
+      if (locked) {
+        await creditWallet({
+          userId,
+          amount: request.amount,
+          description: `Top-up via Flutterwave (${request.provider.toUpperCase()})`,
+          paymentMethod: 'flutterwave',
+          momoPhone: request.phone,
+          momoProvider: request.provider,
+          momoReference: request.external_reference,
+        });
+      }
+      return { status: 'success', amount: request.amount };
+    }
+
+    return { status: 'pending', message: 'Waiting for payment confirmation…' };
+  } catch {
+    return { status: 'pending', message: 'Checking payment status…' };
+  }
+}
+
+/** Poll top-up status for a payment started via a public payment link (no auth). */
+export async function checkGuestTopupStatus(topupRequestId) {
+  const supabase = sb();
+  const { data: request, error } = await supabase
+    .from('topup_requests')
+    .select('*')
+    .eq('id', topupRequestId)
+    .not('payment_link_id', 'is', null)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!request) throw new Error('Top-up request not found');
+
+  const userId = request.user_id;
 
   if (request.status === 'success') {
     return { status: 'success', already_credited: true };

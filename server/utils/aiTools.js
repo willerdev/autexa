@@ -11,6 +11,12 @@ import {
 } from '../src/lib/bookingBillPreview.js';
 import { createServiceClient } from '../src/lib/supabase.js';
 import * as walletService from '../src/services/walletService.js';
+import {
+  notifyProviderInAppAndSms,
+  notifyUserInAppAndSms,
+} from '../src/services/notifyChannels.js';
+import { toUgandaE164 } from '../src/lib/phoneE164.js';
+import { sendSmsIfConfigured } from '../src/lib/twilioSms.js';
 
 function getServiceClient() {
   return createServiceClient();
@@ -510,6 +516,30 @@ estimated_total is in major currency units (e.g. USD dollars); server converts t
         memory_id: { type: SchemaType.STRING, description: 'UUID of the memory row to delete' },
       },
       ['user_id', 'memory_id'],
+    ),
+  },
+  {
+    name: 'send_uganda_sms',
+    description: `Send one SMS to a Uganda mobile only (Twilio). phone_number and message come from the conversation (user-stated or clearly inferred).
+Supported formats: 0XXXXXXXXX (10 digits), 256XXXXXXXXX (12 digits), +256XXXXXXXXX. Not for other countries.
+Workflow: (1) If the user only says they want to text/SMS someone, ask for the Uganda number and the message text — do NOT call this tool yet. (2) Recap both, ask for yes to send. (3) Only after they confirm, call with user_confirmed: true.
+Do not send marketing without clear consent; never put passwords, card numbers, or full national IDs in the message.`,
+    parameters: objectSchema(
+      {
+        phone_number: {
+          type: SchemaType.STRING,
+          description: 'Uganda mobile, e.g. 0771234567 or +256771234567',
+        },
+        message: {
+          type: SchemaType.STRING,
+          description: 'Plain-text SMS body; keep concise (under ~320 chars for a single segment when possible)',
+        },
+        user_confirmed: {
+          type: SchemaType.BOOLEAN,
+          description: 'Must be true only after the user clearly said yes / confirmed to send this SMS.',
+        },
+      },
+      ['phone_number', 'message', 'user_confirmed'],
     ),
   },
 ];
@@ -1036,6 +1066,25 @@ export const TOOL_EXECUTORS = {
 
     if (bookingError) throw new Error(`Booking creation failed: ${bookingError.message}`);
 
+    await notifyUserInAppAndSms(supabase, {
+      userId: user_id,
+      title: 'Booking created',
+      body: `${booking.service_name} on ${booking.date} at ${booking.time}.`,
+      data: {
+        booking_id: booking.id,
+        provider_id: booking.provider_id,
+        service_name: booking.service_name,
+        date: booking.date,
+        time: booking.time,
+        payment_method: booking.payment_method,
+      },
+    });
+    await notifyProviderInAppAndSms(supabase, {
+      providerId: provider_id,
+      title: 'New booking',
+      body: `${booking.service_name} · ${booking.date} ${booking.time}`,
+    });
+
     const st = String(service_type ?? '').toLowerCase();
     const items = booking_details?.selected_items;
     if (st === 'food' && Array.isArray(items) && items.length > 0) {
@@ -1122,8 +1171,8 @@ export const TOOL_EXECUTORS = {
     if (upErr) throw new Error(`cancel_user_bookings update: ${upErr.message}`);
 
     for (const b of eligible) {
-      await supabase.from('user_notifications').insert({
-        user_id,
+      await notifyUserInAppAndSms(supabase, {
+        userId: user_id,
         title: 'Booking cancelled',
         body: why ? `Reason: ${why}` : 'Your booking was cancelled.',
         data: {
@@ -1169,8 +1218,8 @@ export const TOOL_EXECUTORS = {
     if (error) throw new Error(`update_user_booking: ${error.message}`);
     if (!booking?.id) return { error: 'Booking not found or not owned by this user' };
 
-    await supabase.from('user_notifications').insert({
-      user_id,
+    await notifyUserInAppAndSms(supabase, {
+      userId: user_id,
       title: 'Booking updated',
       body: `Updated to ${booking.date} at ${booking.time}.`,
       data: {
@@ -1426,5 +1475,42 @@ export const TOOL_EXECUTORS = {
     const { error: delErr } = await supabase.from('user_ai_learned_memories').delete().eq('id', mid).eq('user_id', user_id);
     if (delErr) throw new Error(`forget_learned_memory delete: ${delErr.message}`);
     return { success: true, message: 'Memory removed.' };
+  },
+
+  send_uganda_sms: async ({ user_id, phone_number, message, user_confirmed }) => {
+    const confirmed =
+      user_confirmed === true || String(user_confirmed ?? '').toLowerCase() === 'true';
+    if (!confirmed) {
+      return {
+        error:
+          'Confirm with the user first: repeat the exact Uganda number and message, then call again with user_confirmed: true.',
+      };
+    }
+    const to = toUgandaE164(phone_number);
+    if (!to) {
+      return {
+        error:
+          'Not a valid Uganda mobile. Use 10 digits starting with 0 (e.g. 0771234567), or 256… / +256… with 9 digits after 256.',
+      };
+    }
+    const body = String(message ?? '').trim();
+    if (!body) {
+      return { error: 'message is empty' };
+    }
+    if (body.length > 1600) {
+      return { error: 'message too long (max 1600 characters)' };
+    }
+
+    const out = await sendSmsIfConfigured({ to, body });
+    if (out.skipped) {
+      return {
+        error: 'SMS is not available (Twilio not configured or TWILIO_SMS_ENABLED disables sending).',
+      };
+    }
+    if (out.error) {
+      return { error: out.error };
+    }
+    console.log('[send_uganda_sms]', { actor_user_id: user_id, to });
+    return { success: true, message_sid: out.sid, to };
   },
 };

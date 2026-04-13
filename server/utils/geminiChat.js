@@ -27,6 +27,60 @@ function normalizeArgs(call) {
   return raw;
 }
 
+const GEMINI_SEND_TIMEOUT_MS = Number(process.env.GEMINI_SEND_TIMEOUT_MS || 120000);
+const GEMINI_HISTORY_TIMEOUT_MS = Number(process.env.GEMINI_HISTORY_TIMEOUT_MS || 15000);
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    }),
+  ]);
+}
+
+function isRetriableGeminiError(err) {
+  const msg = String(err?.message || '');
+  return (
+    /503/i.test(msg) ||
+    /service unavailable/i.test(msg) ||
+    /high demand/i.test(msg) ||
+    /temporarily/i.test(msg) ||
+    /rate limit/i.test(msg) ||
+    /429/i.test(msg)
+  );
+}
+
+async function sleep(ms) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+function getModelFallbacks() {
+  const preferred = (process.env.GEMINI_TOOLS_MODEL || process.env.GEMINI_MODEL || '').trim();
+  const extra = String(process.env.GEMINI_FALLBACK_MODELS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const defaults = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-latest'];
+  return Array.from(new Set([preferred || 'gemini-flash-latest', ...extra, ...defaults])).filter(Boolean);
+}
+
+/** Avoid hanging forever if the SDK never settles (seen after tool rounds). */
+function extractAssistantText(result) {
+  try {
+    const t = result?.response?.text?.();
+    if (typeof t === 'string' && t.trim()) return t.trim();
+  } catch (e) {
+    console.warn('[Gemini] response.text() failed, using parts fallback:', e?.message || e);
+  }
+  const parts = result?.response?.candidates?.[0]?.content?.parts ?? [];
+  const chunks = [];
+  for (const p of parts) {
+    if (typeof p?.text === 'string' && p.text) chunks.push(p.text);
+  }
+  return chunks.join('').trim();
+}
+
 /**
  * Gemini function-calling loop: tools fetch real DB rows, model answers from results.
  *
@@ -65,12 +119,12 @@ ${JSON.stringify({
     console.error('[runGeminiChat] buildUserContext', e);
   }
 
-  const modelName = process.env.GEMINI_TOOLS_MODEL || process.env.GEMINI_MODEL || 'gemini-flash-latest';
-  const genAI = new GoogleGenerativeAI(getKey());
-  const model = genAI.getGenerativeModel(
-    {
-      model: modelName,
-      systemInstruction: `
+  async function runWithModel(modelName) {
+    const genAI = new GoogleGenerativeAI(getKey());
+    const model = genAI.getGenerativeModel(
+      {
+        model: modelName,
+        systemInstruction: `
 You are Autexa's AI assistant — an intelligent service booking helper for many verticals (automotive, food, cleaning, and anything providers list).
 The authenticated user's ID is: ${userId}
 Today's date is: ${new Date().toDateString()} (${new Date().toISOString().slice(0, 10)})
@@ -95,6 +149,17 @@ DYNAMIC FLOW (typical):
 8) MANAGE — cancel_user_bookings (bulk OK) after explicit confirmation; update_user_booking for reschedule; delete_user_car only after explicit confirmation. Always use get_user_bookings first to resolve ids.
 9) LEARN — save_user_preferences after success or when they state stable likes/dislikes (no card numbers, no passwords).
 9b) LONG-TERM CHAT MEMORY — You receive learnedMemories (id + text) in the snapshot. Use save_learned_memory after the user explicitly confirms a durable preference or correction. Use forget_learned_memory with the matching id if they say a saved line is wrong. Never store payment card numbers, passwords, PINs, or national IDs.
+
+10) OUTBOUND SMS (Uganda only, tool: send_uganda_sms) — multi-turn by default; use natural language to infer intent and slot-fill.
+- Triggers include: "send an sms", "text someone", "message [person]", "notify them by sms", etc.
+- NEVER call send_uganda_sms in the same turn as the user only expressing vague intent (e.g. "I want to send a text") with no recipient and/or no message body. Ask what's missing instead.
+- COLLECT (use conversation; one or two short questions):
+  • WHERE — Uganda mobile number if not already clear (0XXXXXXXXX, 256…, or +256…). If they mention a contact without a number, ask for the number.
+  • WHAT — exact text to send if not already clear. If they say "tell them I'm on my way", that is the message.
+- If a single user message already contains a valid Uganda number AND the full message to send, skip redundant questions; still confirm before sending (next step).
+- CONFIRM — Always restate before sending: "I'll SMS +256… : «exact text». Reply **yes** to send." (or equivalent). Wait for explicit confirmation (yes / send it / confirm).
+- EXECUTE — Only after they confirm, call send_uganda_sms with phone_number, message, and user_confirmed: true. If the tool errors (invalid number, Twilio off), explain and offer to fix the number or try again.
+- Follow RULE 1 for follow-ups: if you asked for the number and they only send the number, keep SMS intent and ask for the message (or send if you already have both).
 
 FOOD: use full_menu from get_service_details; respect dietary notes; support item lines with quantities; include delivery_address in booking_details when required.
 
@@ -134,7 +199,7 @@ After a write, state what happened based on tool output (e.g. how many succeeded
 --- SAFETY (destructive or irreversible actions) ---
 
 GUARD 1 — Confirm before destructive writes.
-For cancellations, deletions, or bulk updates: list what will be affected (with count), ask for explicit confirmation (e.g. "Confirm?" or Yes/No), and only then use tools that mutate data.
+For cancellations, deletions, bulk updates, or outbound SMS: list what will be affected (or the exact number + message for SMS), ask for explicit confirmation (e.g. "Confirm?" or Yes/No), and only then use tools that mutate data.
 
 GUARD 2 — No writes on ambiguous intent.
 If the message could mean several things, ask one clarifying question before calling mutating tools.
@@ -150,6 +215,7 @@ Always rely on tools that enforce the authenticated user (${userId}). Never expo
 - pay_provider_from_wallet is for paying a provider by their auth user_id; use lookup_provider_wallet_user if you only have providers.id.
 - withdraw_to_mobile_money sends wallet balance to Uganda mobile money via Flutterwave. Extremely sensitive: confirm amount, phone, and network (mtn/airtel); user_confirmed: true only after clear yes. Top-ups use the Wallet screen (Flutterwave).
 - save_wallet_ai_memory stores short wallet-related notes the user wants remembered (confirm before saving).
+- send_uganda_sms sends a plain SMS to a Uganda mobile (0… / 256… / +256…). Do not call until you have both recipient and message from the user (or clearly inferred in-thread), you have restated them, and they said yes. Then user_confirmed: true. Requires Twilio on the server.
 
 --- RESPONSE FORMAT ---
 
@@ -163,7 +229,7 @@ Always rely on tools that enforce the authenticated user (${userId}). Never expo
 
 - Empty tool results: say e.g. "No bookings found" — do not speculate.
 - Tool failure / timeout: say you could not reach the data right now and suggest retrying.
-- Out of scope: say you can help with bookings, services available in the app, and account data exposed via your tools.
+- Out of scope: say you can help with bookings, services available in the app, Uganda SMS the user confirms, and account data exposed via your tools.
 
 CLOSINGS: If the user says thanks, no thanks, goodbye, or declines further help, reply in one short warm sentence. Do **not** call tools for that.
 
@@ -174,23 +240,41 @@ INTERACTIVE UI (mandatory): Whenever your reply asks the user for a booking/appo
 "all of them" / "cancel everything" → confirm count, then cancel_user_bookings with every eligible booking id and user_confirmed: true (use get_user_bookings if you need fresh ids).
 "the last one" → most recent from last list.
 "never mind" → stop the current action; ask what else they need.
-"yes" / "confirm" → proceed with the last proposed confirmed action.
+"yes" / "confirm" / "send" / "go" → proceed with the last proposed confirmed action (e.g. send_uganda_sms after recap).
 "no" → abort the proposed action; confirm nothing changed.
+"I want to send an sms" / "text someone" → ask who (Uganda number) and what to say; do not call send_uganda_sms until both are known and they confirm the recap.
 `.trim(),
-      tools: [{ functionDeclarations: [EMIT_CHAT_WIDGETS_TOOL, ...TOOL_DEFINITIONS] }],
-      toolConfig: {
-        functionCallingConfig: {
-          mode: FunctionCallingMode.AUTO,
+        tools: [{ functionDeclarations: [EMIT_CHAT_WIDGETS_TOOL, ...TOOL_DEFINITIONS] }],
+        toolConfig: {
+          functionCallingConfig: {
+            mode: FunctionCallingMode.AUTO,
+          },
         },
       },
-    },
-    { apiVersion: 'v1beta' },
-  );
+      { apiVersion: 'v1beta' },
+    );
 
-  const history = Array.isArray(conversationHistory) ? conversationHistory : [];
-  const chat = model.startChat({ history });
+    const history = Array.isArray(conversationHistory) ? conversationHistory : [];
+    const chat = model.startChat({ history });
 
-  let result = await chat.sendMessage(String(userMessage ?? '').slice(0, 8000));
+    async function sendWithRetry(sendFn, label) {
+      let lastErr;
+      for (let a = 0; a < 3; a += 1) {
+        try {
+          return await withTimeout(sendFn(), GEMINI_SEND_TIMEOUT_MS, label);
+        } catch (e) {
+          lastErr = e;
+          if (!isRetriableGeminiError(e)) throw e;
+          await sleep(600 * (2 ** a));
+        }
+      }
+      throw lastErr;
+    }
+
+    let result = await sendWithRetry(
+      () => chat.sendMessage(String(userMessage ?? '').slice(0, 8000)),
+      'Gemini sendMessage(user)',
+    );
 
   for (let i = 0; i < 8; i += 1) {
     const calls = extractFunctionCalls(result);
@@ -212,6 +296,7 @@ INTERACTIVE UI (mandatory): Whenever your reply asks the user for a booking/appo
         'save_learned_memory',
         'forget_learned_memory',
         'preview_booking_bill',
+        'send_uganda_sms',
       ]);
       if (walletBoundUserTools.has(name)) {
         args = { ...args, user_id: userId };
@@ -270,21 +355,27 @@ INTERACTIVE UI (mandatory): Whenever your reply asks the user for a booking/appo
       });
     }
 
-    result = await chat.sendMessage(responseParts);
+    result = await sendWithRetry(
+      () => chat.sendMessage(responseParts),
+      'Gemini sendMessage(tool results)',
+    );
   }
 
-  let answer = '';
-  try {
-    answer = result.response.text();
-  } catch {
-    answer = "I couldn't generate a text reply. If this keeps happening, try rephrasing your question.";
+  let answer = extractAssistantText(result);
+  if (!answer) {
+    answer = 'Done.';
   }
 
-  let updatedHistory = null;
+  /** Omit or leave unset on failure so /ai/chat does not wipe stored turns. */
+  let updatedHistory;
   try {
-    updatedHistory = await chat.getHistory();
+    updatedHistory = await withTimeout(
+      chat.getHistory(),
+      GEMINI_HISTORY_TIMEOUT_MS,
+      'Gemini getHistory',
+    );
   } catch (err) {
-    console.error('[Gemini getHistory] failed — clearing stored chat for this user on next save', err);
+    console.error('[Gemini getHistory] failed or slow — keeping prior server history', err?.message || err);
   }
 
   const trimmedAnswer = answer?.trim() || 'Done.';
@@ -298,10 +389,24 @@ INTERACTIVE UI (mandatory): Whenever your reply asks the user for a booking/appo
 
   const billPreview = takeBillPreviewForChatResponse(userId);
 
-  return {
-    answer: trimmedAnswer,
-    history: updatedHistory,
-    widgets: widgetsOut,
-    billPreview,
-  };
+    return {
+      answer: trimmedAnswer,
+      history: updatedHistory,
+      widgets: widgetsOut,
+      billPreview,
+    };
+  }
+
+  const candidates = getModelFallbacks();
+  let last;
+  for (const name of candidates) {
+    try {
+      return await runWithModel(name);
+    } catch (e) {
+      last = e;
+      if (!isRetriableGeminiError(e)) throw e;
+      console.warn('[runGeminiChat] model failed, trying fallback:', name, e?.message || e);
+    }
+  }
+  throw last;
 }

@@ -7,6 +7,7 @@ import { buildUserContext } from '../../utils/buildUserContext.js';
 import { rateLimitHit } from '../../utils/aiChatRateLimit.js';
 import { clearBookingBillPreviewState } from '../lib/bookingBillPreview.js';
 import { runGeminiChat } from '../../utils/geminiChat.js';
+import { getApiFlags } from '../lib/adminFeatureFlags.js';
 import { PROMPTS, systemWithUserContext } from '../../utils/prompts.js';
 
 const upload = multer({
@@ -107,6 +108,13 @@ aiRouter.post('/chat', async (req, res) => {
         });
       }
       try {
+        const flags = await getApiFlags();
+        if (flags.ai_chat === false) {
+          return res.status(503).json({
+            error: 'AI assistant is temporarily disabled.',
+            answer: 'The AI assistant is temporarily unavailable. Please try again later.',
+          });
+        }
         const prev = toolChatHistoryByUser.get(req.user.id) ?? [];
         const { answer, history, widgets, billPreview } = await runGeminiChat({
           userMessage: message.trim(),
@@ -115,9 +123,10 @@ aiRouter.post('/chat', async (req, res) => {
         });
         if (Array.isArray(history) && history.length > 0) {
           toolChatHistoryByUser.set(req.user.id, history.slice(-40));
-        } else if (history == null) {
+        } else if (history === null) {
           toolChatHistoryByUser.delete(req.user.id);
         }
+        // history === undefined: getHistory timed out or failed — keep existing turns
         const payload = { answer };
         if (Array.isArray(widgets) && widgets.length) {
           payload.widgets = widgets;

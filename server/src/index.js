@@ -8,12 +8,15 @@ import Stripe from 'stripe';
 import { createServiceClient } from './lib/supabase.js';
 import * as flutterwaveLib from './lib/flutterwave.js';
 import { aiRouter } from './routes/ai.js';
-import { adminRouter } from './routes/admin.js';
+import { adminRouter, getPublicCategoriesHandler } from './routes/admin.js';
+import { publicProviderDetailHandler, publicProvidersHandler, publicServicesHandler } from './routes/publicApi.js';
 import { bookingsRouter } from './routes/bookings.js';
 import { completeBookingPaymentFromTxRef, paymentsRouter } from './routes/payments.js';
 import { pitstopRouter } from './routes/pitstop.js';
 import { pushRouter } from './routes/push.js';
 import { serviceCatalogRouter } from './routes/serviceCatalog.js';
+import { paymentLinksPublicRouter } from './routes/paymentLinksPublic.js';
+import { savingsChallengesRouter } from './routes/savingsChallenges.js';
 import { walletRouter } from './routes/wallet.js';
 import { completePendingTopupByTxRef } from './services/walletService.js';
 
@@ -128,6 +131,12 @@ app.post(
 
 app.use(express.json({ limit: '25mb' }));
 
+app.get('/api/public/categories', getPublicCategoriesHandler);
+app.get('/api/public/providers', publicProvidersHandler);
+app.get('/api/public/providers/:id', publicProviderDetailHandler);
+app.get('/api/public/services', publicServicesHandler);
+app.use('/api/public/payment-link', paymentLinksPublicRouter);
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'autexa-api' });
 });
@@ -163,6 +172,7 @@ app.use('/api/services', serviceCatalogRouter);
 app.use('/api/push', pushRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/savings-challenges', savingsChallengesRouter);
 
 app.post('/api/payments/mobile-money-placeholder', (_req, res) => {
   res.status(501).json({

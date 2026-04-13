@@ -64,6 +64,36 @@ walletRouter.post('/withdraw', async (req, res) => {
   }
 });
 
+walletRouter.post('/savings/deposit', async (req, res) => {
+  try {
+    const { amount, description } = req.body ?? {};
+    if (amount == null) return res.status(400).json({ error: 'amount is required' });
+    const result = await walletService.depositToSavings({
+      userId: req.user.id,
+      amount: Number(amount),
+      description: description != null ? String(description) : undefined,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e?.message || 'Savings deposit failed' });
+  }
+});
+
+walletRouter.post('/savings/withdraw', async (req, res) => {
+  try {
+    const { amount, description } = req.body ?? {};
+    if (amount == null) return res.status(400).json({ error: 'amount is required' });
+    const result = await walletService.withdrawFromSavings({
+      userId: req.user.id,
+      amount: Number(amount),
+      description: description != null ? String(description) : undefined,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e?.message || 'Savings withdraw failed' });
+  }
+});
+
 walletRouter.get('/transactions', async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -159,5 +189,43 @@ walletRouter.post('/transfer-payee', async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(400).json({ error: e?.message || 'Transfer failed' });
+  }
+});
+
+walletRouter.get('/payment-links', async (req, res) => {
+  try {
+    const rows = await walletService.listPaymentLinks(req.user.id);
+    res.json({ data: rows });
+  } catch (e) {
+    console.error('[GET /wallet/payment-links]', e);
+    res.status(500).json({ error: e?.message || 'Failed to load payment links' });
+  }
+});
+
+walletRouter.post('/payment-links', async (req, res) => {
+  try {
+    const { title, suggestedAmountUgx, expiresAt } = req.body ?? {};
+    const row = await walletService.createPaymentLink({
+      ownerUserId: req.user.id,
+      title: title != null ? String(title) : undefined,
+      suggestedAmountUgx,
+      expiresAt: expiresAt != null ? String(expiresAt) : null,
+    });
+    res.status(201).json(row);
+  } catch (e) {
+    res.status(400).json({ error: e?.message || 'Could not create link' });
+  }
+});
+
+walletRouter.patch('/payment-links/:id', async (req, res) => {
+  try {
+    const { active } = req.body ?? {};
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ error: 'active (boolean) is required' });
+    }
+    const row = await walletService.setPaymentLinkActive(req.user.id, req.params.id, active);
+    res.json(row);
+  } catch (e) {
+    res.status(400).json({ error: e?.message || 'Could not update link' });
   }
 });

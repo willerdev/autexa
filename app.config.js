@@ -58,6 +58,7 @@ function readPublicEnv(name) {
 module.exports = {
   expo: {
     ...appJson.expo,
+    owner: 'willer256',
     // Required for `expo prebuild` / `expo run:android` (cannot be auto-injected into app.config.js).
     ios: {
       ...appJson.expo.ios,
@@ -80,15 +81,20 @@ module.exports = {
       ...(appJson.expo.plugins ?? []),
       'expo-web-browser',
       'expo-notifications',
+      'expo-font',
       '@react-native-community/datetimepicker',
       'expo-av',
     ],
     extra: {
       ...(appJson.expo.extra ?? {}),
+      eas: {
+        projectId: 'f0c60803-5b26-4476-8756-b5ddfa107db9',
+      },
       supabaseUrl: readPublicEnv('EXPO_PUBLIC_SUPABASE_URL'),
       supabaseAnonKey: readPublicEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
       supportUserId: readPublicEnv('EXPO_PUBLIC_SUPPORT_USER_ID'),
       autexaApiUrl: readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL'),
+      webAppUrl: readPublicEnv('EXPO_PUBLIC_WEB_APP_URL'),
     },
   },
 };

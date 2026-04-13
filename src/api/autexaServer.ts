@@ -56,3 +56,40 @@ export async function autexaFetch<T>(
   }
   return parsed as T;
 }
+
+/** Unauthenticated API calls (e.g. public payment link top-up). */
+export async function autexaPublicFetch<T>(
+  path: string,
+  init: RequestInit & { json?: unknown } = {},
+): Promise<T> {
+  if (!isAutexaApiConfigured()) {
+    throw new AutexaApiError('Autexa API URL is not configured (EXPO_PUBLIC_AUTEXA_API_URL).', 0);
+  }
+  const url = `${env.autexaApiUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const { json: jsonBody, ...rest } = init;
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...((rest.headers as Record<string, string>) ?? {}),
+  };
+  let body: BodyInit | undefined = rest.body as BodyInit;
+  if (jsonBody !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(jsonBody);
+  }
+  const res = await fetch(url, { ...rest, headers, body });
+  const text = await res.text();
+  let parsed: unknown = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    parsed = { raw: text };
+  }
+  if (!res.ok) {
+    let msg = text || res.statusText;
+    if (typeof parsed === 'object' && parsed !== null && typeof (parsed as { error?: string }).error === 'string') {
+      msg = (parsed as { error: string }).error.trim();
+    }
+    throw new AutexaApiError(msg, res.status);
+  }
+  return parsed as T;
+}

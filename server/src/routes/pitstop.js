@@ -3,7 +3,9 @@ import { requireUser } from '../lib/auth.js';
 import { createServiceClient } from '../lib/supabase.js';
 import { normalizeBookingPaymentMethod } from '../lib/bookingPayments.js';
 import { buildTextReceiptLines } from '../lib/bookingBillPreview.js';
+import { getApiFlags } from '../lib/adminFeatureFlags.js';
 import { listProvidersAvailable, parseDistanceKm } from '../lib/providers.js';
+import { notifyUserInAppAndSms } from '../services/notifyChannels.js';
 
 export const pitstopRouter = Router();
 pitstopRouter.use(requireUser);
@@ -181,9 +183,8 @@ pitstopRouter.post('/create-booking', async (req, res) => {
       .select('id')
       .single();
     if (error) return res.status(500).json({ error: error.message });
-    // Save an in-app notification for the user.
-    await sb.from('user_notifications').insert({
-      user_id: req.user.id,
+    await notifyUserInAppAndSms(sb, {
+      userId: req.user.id,
       title: 'Booking created',
       body: `Your booking is ready. Complete payment to confirm.`,
       data: {
@@ -258,8 +259,8 @@ pitstopRouter.post('/auto-book', async (req, res) => {
       .single();
     if (insErr) return res.status(500).json({ error: insErr.message });
 
-    await sb.from('user_notifications').insert({
-      user_id: req.user.id,
+    await notifyUserInAppAndSms(sb, {
+      userId: req.user.id,
       title: 'Auto-booked',
       body: `Autexa booked ${svc.name} with ${picked.name}.`,
       data: {
@@ -335,6 +336,14 @@ pitstopRouter.post('/assist', async (req, res) => {
     const { text } = req.body ?? {};
     const input = String(text ?? '').trim();
     if (!input) return res.status(400).json({ error: 'text required' });
+
+    const flags = await getApiFlags();
+    if (flags.pitstop_assist === false) {
+      return res.status(503).json({
+        error: 'Assistant temporarily unavailable',
+        reply: 'This assistant is temporarily unavailable. Please try again later.',
+      });
+    }
 
     const sb = createServiceClient();
     const { data: services, error } = await sb.from('services').select('id,name,category,slug').order('name');
@@ -487,8 +496,8 @@ pitstopRouter.post('/update-booking', async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     if (!booking?.id) return res.status(404).json({ error: 'Booking not found' });
 
-    await sb.from('user_notifications').insert({
-      user_id: req.user.id,
+    await notifyUserInAppAndSms(sb, {
+      userId: req.user.id,
       title: 'Booking updated',
       body: `Updated to ${booking.date} at ${booking.time}.`,
       data: {
@@ -538,11 +547,17 @@ pitstopRouter.post('/cancel-booking', async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     if (!booking?.id) return res.status(404).json({ error: 'Booking not found' });
 
-    await sb.from('user_notifications').insert({
-      user_id: req.user.id,
+    await notifyUserInAppAndSms(sb, {
+      userId: req.user.id,
       title: 'Booking cancelled',
       body: why ? `Reason: ${why}` : 'Your booking was cancelled.',
-      data: { booking_id: booking.id, provider_id: booking.provider_id, date: booking.date, time: booking.time, service_name: booking.service_name ?? null },
+      data: {
+        booking_id: booking.id,
+        provider_id: booking.provider_id,
+        date: booking.date,
+        time: booking.time,
+        service_name: booking.service_name ?? null,
+      },
     });
 
     return res.json({ ok: true, booking: { id: booking.id } });

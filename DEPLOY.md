@@ -5,7 +5,7 @@ This document implements the hosting and distribution checklist for production.
 ## 1. Production Supabase
 
 1. Create a **production** project at [supabase.com](https://supabase.com) (separate from dev if you want clean data).
-2. Apply schema: **SQL Editor** → run each file in [`supabase/migrations/`](supabase/migrations/) **in filename order**, or use the Supabase CLI:
+2. Apply schema: **SQL Editor** → run each file in [`supabase/migrations/`](supabase/migrations/) **in filename order** (run [`scripts/list-supabase-migrations.sh`](scripts/list-supabase-migrations.sh) to print the list), or use the Supabase CLI:
    - `supabase link --project-ref <ref>`
    - `supabase db push` (if you use linked migrations)
 3. Copy **Project URL** and **anon public** key from **Project Settings → API** into your app env as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
@@ -24,13 +24,20 @@ You need a public **HTTPS** base URL (example: `https://autexa-api.fly.dev`). Se
 4. `fly deploy` from `server/` (uses [`server/Dockerfile`](server/Dockerfile)).
 5. Set secrets:  
    `fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... GEMINI_API_KEY=... PUBLIC_API_BASE_URL=https://your-app.fly.dev`  
-   Add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` if you use Stripe.
+   Add Flutterwave vars from [`server/.env.example`](server/.env.example). Add Stripe only if enabled.
 
-### Option B — Render
+### Option B — Render (step-by-step)
 
-1. New **Web Service** → connect repo, or use [`render.yaml`](render.yaml) (Blueprint).
-2. **Docker**: Dockerfile path `server/Dockerfile`, context `server`.
-3. Set the same env vars as in `render.yaml` (mark secrets in the dashboard).
+1. Sign up at [render.com](https://render.com) and connect **GitHub**.
+2. **New → Blueprint** → select repo **`willerdev/autexa`** and apply [`render.yaml`](render.yaml), **or** **New → Web Service** → same repo with:
+   - **Runtime:** Docker  
+   - **Dockerfile path:** `server/Dockerfile`  
+   - **Docker context:** `server`
+3. Wait for the first deploy; copy the service URL (e.g. `https://autexa-api.onrender.com`, no trailing slash).
+4. In **Environment**, set **`PUBLIC_API_BASE_URL`** to that exact URL. Add every variable listed in [`render.yaml`](render.yaml) / [`server/.env.example`](server/.env.example); mark secrets (Supabase service role, Gemini, Flutterwave client secret, webhook hash) as **Secret**.
+5. **Flutterwave:** Dashboard → Webhooks → URL `https://<your-render-host>/api/webhooks/flutterwave` → copy **secret hash** into **`FLUTTERWAVE_SECRET_HASH`** on Render.
+6. Verify: open `https://<your-host>/health` in a browser (should succeed). Free tier may sleep; first request after idle can take ~30–60s.
+7. In the app, set **`EXPO_PUBLIC_AUTEXA_API_URL`** to the same Render URL ([`.env.example`](.env.example), EAS secrets — see §4).
 
 ### Option C — Railway
 
@@ -39,21 +46,29 @@ You need a public **HTTPS** base URL (example: `https://autexa-api.fly.dev`). Se
 
 ### API environment reference
 
-See [`server/.env.example`](server/.env.example). Minimum: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `PORT` (default 8787), `PUBLIC_API_BASE_URL` (your public API URL for Stripe return URLs).
+See [`server/.env.example`](server/.env.example). **Minimum for production:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `PORT` (default 8787), `PUBLIC_API_BASE_URL` (your public API URL, must match the host users and webhooks call).
+
+**Payments (Flutterwave v4):** `FLUTTERWAVE_CLIENT_ID`, `FLUTTERWAVE_CLIENT_SECRET`, `FLUTTERWAVE_SECRET_HASH` (webhook), optional `FLUTTERWAVE_SANDBOX=1`, `FLUTTERWAVE_BOOKING_USD_TO_UGX`.
 
 Health check: `GET /health`
 
 The server listens on `0.0.0.0` so it works inside containers.
 
-## 3. Stripe webhooks (if used)
+## 3. Flutterwave webhooks (wallet + bookings)
 
-1. In **Stripe Dashboard → Developers → Webhooks → Add endpoint**  
+1. Dashboard → **Webhooks** → URL: `https://<your-api-host>/api/webhooks/flutterwave`
+2. Set **`FLUTTERWAVE_SECRET_HASH`** on the API host to the dashboard secret hash (header `verif-hash`).  
+3. Handler: [`server/src/index.js`](server/src/index.js) (`charge.completed` → credit wallet / mark booking paid).
+
+## 4. Stripe webhooks (legacy, optional)
+
+1. Set **`STRIPE_WEBHOOK_ENABLED=1`** on the API host only if you use Stripe; otherwise the route is disabled.
+2. In **Stripe Dashboard → Developers → Webhooks → Add endpoint**  
    URL: `https://<your-api-host>/api/webhooks/stripe`  
    Events: at least `checkout.session.completed` (as implemented in [`server/src/index.js`](server/src/index.js)).
-2. Copy the **Signing secret** into `STRIPE_WEBHOOK_SECRET` on the API host.
-3. Ensure `PUBLIC_API_BASE_URL` matches the same host you use in Stripe redirects.
+3. Copy the **Signing secret** into `STRIPE_WEBHOOK_SECRET` on the API host.
 
-## 4. EAS Build (Android APK / AAB)
+## 5. EAS Build (Android APK / AAB)
 
 1. `npx expo login` and `npm install` at repo root.
 2. `npx eas-cli@latest init` — links the project and writes `extra.eas.projectId` into your Expo config when prompted.
@@ -78,7 +93,7 @@ The server listens on `0.0.0.0` so it works inside containers.
 
 5. iTunes / Play: use `eas submit` when you are ready (Apple Developer / Play Console accounts required).
 
-## 5. Distributing the APK to testers
+## 6. Distributing the APK to testers
 
 **Internal APK (preview profile)**
 
@@ -97,4 +112,4 @@ The server listens on `0.0.0.0` so it works inside containers.
 
 - Rotate any key that was ever committed or pasted in chat.
 - Tighten CORS in [`server/src/index.js`](server/src/index.js) if you expose a web app with a fixed origin.
-- Monitor Gemini and Stripe usage in production dashboards.
+- Monitor Gemini and Flutterwave usage in production dashboards.

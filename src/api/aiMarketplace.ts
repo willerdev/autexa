@@ -42,20 +42,34 @@ export type ChatBillPreviewPayload = {
   textReceipt?: { title: string; lines: string[] };
 };
 
+const AI_TOOL_CHAT_TIMEOUT_MS = 120_000;
+
 /** Gemini tool-calling chat: server runs DB tools then answers from real rows. */
 export async function postAiToolChat(message: string): Promise<{
   answer: string;
   widgets?: ChatWidgetSpec[];
   billPreview?: ChatBillPreviewPayload;
 }> {
-  const raw = await autexaFetch<{
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), AI_TOOL_CHAT_TIMEOUT_MS);
+  let raw: {
     answer: string;
     widgets?: ChatWidgetSpec[];
     billPreview?: ChatBillPreviewPayload;
-  }>('/api/ai/chat', {
-    method: 'POST',
-    json: { message },
-  });
+  };
+  try {
+    raw = await autexaFetch<{
+      answer: string;
+      widgets?: ChatWidgetSpec[];
+      billPreview?: ChatBillPreviewPayload;
+    }>('/api/ai/chat', {
+      method: 'POST',
+      json: { message },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(tid);
+  }
   const answer = raw.answer ?? '';
   let widgets = Array.isArray(raw.widgets) ? raw.widgets : [];
   if (!widgets.length) {

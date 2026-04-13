@@ -1,8 +1,8 @@
 # Autexa API (Node.js)
 
-Secure backend for **Gemini AI**, **Stripe Checkout**, **auto-assign bookings**, and **Expo push token** registration. Secrets stay here — never in the Expo app.
+Secure backend for **Gemini AI**, **Flutterwave v4** (wallet + booking mobile money), **auto-assign bookings**, and **Expo push token** registration. Secrets stay here — never in the Expo app.
 
-**Production deploy:** see [../DEPLOY.md](../DEPLOY.md) (Docker, Fly.io, Render, Railway, Stripe webhook URL, EAS).
+**Production deploy:** see [../DEPLOY.md](../DEPLOY.md) (Docker, Render, Fly.io, Railway, Flutterwave webhook, EAS).
 
 ## Setup
 
@@ -18,19 +18,14 @@ Secure backend for **Gemini AI**, **Stripe Checkout**, **auto-assign bookings**,
 | `SUPABASE_URL` | Same project as the app |
 | `SUPABASE_ANON_KEY` | Verify user JWTs |
 | `SUPABASE_SERVICE_ROLE_KEY` | DB writes (webhooks, auto-assign, notifications) — **never** ship to clients |
-| `STRIPE_SECRET_KEY` | Payments |
-| `STRIPE_WEBHOOK_SECRET` | Verify Stripe webhooks |
-| `PUBLIC_API_BASE_URL` | Public URL of this server (e.g. `http://192.168.1.10:8787` for a phone on Wi‑Fi) |
+| `PUBLIC_API_BASE_URL` | Public HTTPS URL of this server (Render/Fly URL in production; must match webhook host) |
+| `FLUTTERWAVE_CLIENT_ID` / `FLUTTERWAVE_CLIENT_SECRET` | Flutterwave v4 OAuth |
+| `FLUTTERWAVE_SECRET_HASH` | Webhook `verif-hash` verification |
+| `STRIPE_*` | Legacy; optional if `STRIPE_WEBHOOK_ENABLED=1` |
 
-## Stripe
+## Flutterwave
 
-1. Create a **Checkout**-compatible price or use dynamic `price_data` (already implemented).
-2. Add webhook endpoint: `https://<PUBLIC_API_BASE_HOST>/api/webhooks/stripe` (must match `PUBLIC_API_BASE_URL`).
-3. Subscribe to `checkout.session.completed`.
-
-## Mobile money
-
-`POST /api/payments/mobile-money-placeholder` returns `501` until you integrate a provider (Flutterwave, MTN MoMo, etc.).
+Webhook: `POST /api/webhooks/flutterwave` — set URL in Flutterwave Dashboard; see [../DEPLOY.md](../DEPLOY.md).
 
 ## Admin API
 

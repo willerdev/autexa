@@ -1,9 +1,10 @@
-import { autexaFetch } from './autexaServer';
+import { autexaFetch, autexaPublicFetch } from './autexaServer';
 
 export type Wallet = {
   id: string;
   user_id: string;
   balance: number | string;
+  savings_balance?: number | string;
   currency: string;
   is_locked: boolean;
   locked_reason: string | null;
@@ -47,6 +48,20 @@ export type WithdrawResponse = {
 
 export async function requestWalletWithdraw(body: { amount: number; phone: string; provider: 'mtn' | 'airtel' }) {
   return autexaFetch<WithdrawResponse>('/api/wallet/withdraw', { method: 'POST', json: body });
+}
+
+export type SavingsTransferResponse = {
+  success: boolean;
+  wallet_balance: number | string;
+  savings_balance: number | string;
+};
+
+export async function depositToSavings(body: { amount: number; description?: string }) {
+  return autexaFetch<SavingsTransferResponse>('/api/wallet/savings/deposit', { method: 'POST', json: body });
+}
+
+export async function withdrawFromSavings(body: { amount: number; description?: string }) {
+  return autexaFetch<SavingsTransferResponse>('/api/wallet/savings/withdraw', { method: 'POST', json: body });
 }
 
 export type WalletTransaction = {
@@ -117,4 +132,66 @@ export async function removeWalletPayee(payeeId: string) {
 
 export async function transferToWalletPayee(body: { payeeId: string; amount: number; description?: string }) {
   return autexaFetch<Record<string, unknown>>('/api/wallet/transfer-payee', { method: 'POST', json: body });
+}
+
+export type WalletPaymentLinkRow = {
+  id: string;
+  slug: string;
+  title: string | null;
+  suggested_amount_ugx: number | string | null;
+  active: boolean;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export async function fetchWalletPaymentLinks() {
+  return autexaFetch<{ data: WalletPaymentLinkRow[] }>('/api/wallet/payment-links');
+}
+
+export async function createWalletPaymentLink(body: {
+  title?: string;
+  suggestedAmountUgx?: number | null;
+  expiresAt?: string | null;
+}) {
+  return autexaFetch<WalletPaymentLinkRow>('/api/wallet/payment-links', { method: 'POST', json: body });
+}
+
+export async function setWalletPaymentLinkActive(linkId: string, active: boolean) {
+  return autexaFetch<{ id: string; active: boolean }>(`/api/wallet/payment-links/${encodeURIComponent(linkId)}`, {
+    method: 'PATCH',
+    json: { active },
+  });
+}
+
+export type PublicPaymentLinkMeta = {
+  slug: string;
+  title: string | null;
+  suggested_amount_ugx: number | string | null;
+  expires_at: string | null;
+};
+
+export async function fetchPublicPaymentLinkMeta(slug: string): Promise<PublicPaymentLinkMeta | null> {
+  try {
+    return await autexaPublicFetch<PublicPaymentLinkMeta>(
+      `/api/public/payment-link/${encodeURIComponent(slug)}`,
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function postPublicPaymentLinkTopup(
+  slug: string,
+  body: { amount: number; phone: string; provider: 'mtn' | 'airtel' },
+) {
+  return autexaPublicFetch<TopupResponse>(`/api/public/payment-link/${encodeURIComponent(slug)}/topup`, {
+    method: 'POST',
+    json: body,
+  });
+}
+
+export async function fetchGuestTopupStatus(topupRequestId: string) {
+  return autexaPublicFetch<TopupStatusResponse>(
+    `/api/public/payment-link/topup/${encodeURIComponent(topupRequestId)}/status`,
+  );
 }

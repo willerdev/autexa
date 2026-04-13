@@ -10,6 +10,7 @@ import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScre
 import type { MainTabParamList } from '../types';
 import { colors } from '../theme';
 import { useUiStore } from '../stores/uiStore';
+import { WalletTabNavigator } from './WalletTabNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -18,6 +19,7 @@ const iconFor: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = 
   Bookings: 'calendar-outline',
   MyCars: 'car-outline',
   ProviderServicesTab: 'briefcase-outline',
+  Wallet: 'wallet-outline',
   Profile: 'person-outline',
 };
 
@@ -59,6 +61,7 @@ export function MainTabNavigator() {
       ) : (
         <Tab.Screen name="MyCars" component={MyCarsScreen} options={{ title: 'My cars' }} />
       )}
+      <Tab.Screen name="Wallet" component={WalletTabNavigator} options={{ title: 'Wallet' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

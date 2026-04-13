@@ -63,6 +63,7 @@ export type MainTabParamList = {
   Bookings: undefined;
   MyCars: undefined;
   ProviderServicesTab: undefined;
+  Wallet: undefined;
   Profile: undefined;
 };
 
@@ -97,6 +98,9 @@ export type AppStackParamList = {
   Wallet: undefined;
   WalletTransactions: undefined;
   WalletPayees: undefined;
+  WalletPaymentLinks: undefined;
+  SavingsChallenges: undefined;
+  SavingsChallengeDetail: { challengeId: string };
 };
 
 export type RootStackParamList = {

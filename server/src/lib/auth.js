@@ -23,6 +23,19 @@ export async function requireUser(req, res, next) {
     if (error || !user?.id) {
       return res.status(401).json({ error: error?.message ?? 'Invalid or expired session' });
     }
+
+    const svc = createServiceClient();
+    const { data: prof, error: banErr } = await svc
+      .from('users')
+      .select('banned_at')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (banErr) {
+      console.error('[auth] banned check', banErr);
+    } else if (prof?.banned_at) {
+      return res.status(403).json({ error: 'This account has been suspended.' });
+    }
+
     req.authToken = token;
     req.user = user;
     next();

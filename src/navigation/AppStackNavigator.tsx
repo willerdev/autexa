@@ -17,7 +17,10 @@ import { ProviderServiceEditScreen } from '../screens/provider/ProviderServiceEd
 import { ProviderBookingsScreen } from '../screens/provider/ProviderBookingsScreen';
 import { WalletScreen } from '../screens/flow/WalletScreen';
 import { WalletPayeesScreen } from '../screens/flow/WalletPayeesScreen';
+import { WalletPaymentLinksScreen } from '../screens/flow/WalletPaymentLinksScreen';
 import { WalletTransactionsScreen } from '../screens/flow/WalletTransactionsScreen';
+import { SavingsChallengesScreen } from '../screens/flow/SavingsChallengesScreen';
+import { SavingsChallengeDetailScreen } from '../screens/flow/SavingsChallengeDetailScreen';
 import type { AppStackParamList } from '../types';
 import { colors } from '../theme';
 import { MainTabNavigator } from './MainTabNavigator';
@@ -78,6 +81,13 @@ export function AppStackNavigator() {
       <Stack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
       <Stack.Screen name="WalletTransactions" component={WalletTransactionsScreen} options={{ title: 'Transactions' }} />
       <Stack.Screen name="WalletPayees" component={WalletPayeesScreen} options={{ title: 'Saved payees' }} />
+      <Stack.Screen name="WalletPaymentLinks" component={WalletPaymentLinksScreen} options={{ title: 'Payment links' }} />
+      <Stack.Screen name="SavingsChallenges" component={SavingsChallengesScreen} options={{ title: 'Savings challenges' }} />
+      <Stack.Screen
+        name="SavingsChallengeDetail"
+        component={SavingsChallengeDetailScreen}
+        options={{ title: 'Challenge' }}
+      />
     </Stack.Navigator>
   );
 }
