@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -12,15 +12,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { AutexaApiError } from '../../api/autexaServer';
 import {
+  depositToSavings,
   fetchTopupStatus,
   fetchWallet,
   fetchWalletTransactions,
-  requestWalletCardTopup,
   requestWalletTopup,
   requestWalletWithdraw,
+  withdrawFromSavings,
   type WalletTransaction,
 } from '../../api/wallet';
 import { Card, PrimaryButton, ScreenScroll, TextField } from '../../components';
@@ -56,8 +56,9 @@ export function WalletScreen() {
   const [provider] = useState<MomoProvider>('auto');
   const [topupBusy, setTopupBusy] = useState(false);
   const [withdrawBusy, setWithdrawBusy] = useState(false);
+  const [savingsBusy, setSavingsBusy] = useState(false);
   const [pollingTopupId, setPollingTopupId] = useState<string | null>(null);
-  const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | 'card'>(null);
+  const [modal, setModal] = useState<null | 'topup' | 'withdraw' | 'savings'>(null);
 
   const enterY = useRef(new Animated.Value(10)).current;
   const enterOpacity = useRef(new Animated.Value(0)).current;
@@ -220,26 +221,6 @@ export function WalletScreen() {
     }
   }
 
-  async function onCardTopup() {
-    const a = num(amount);
-    if (!Number.isFinite(a)) {
-      Alert.alert('Top-up', 'Enter a valid amount.');
-      return;
-    }
-    try {
-      setTopupBusy(true);
-      const res = await requestWalletCardTopup({ amount: a });
-      if (!res.url) throw new Error('Card checkout unavailable');
-      setModal(null);
-      await WebBrowser.openBrowserAsync(res.url);
-    } catch (e) {
-      const msg = e instanceof AutexaApiError ? e.message : e instanceof Error ? e.message : 'Card top-up failed';
-      Alert.alert('Top-up', msg);
-    } finally {
-      setTopupBusy(false);
-    }
-  }
-
   async function onWithdraw() {
     const a = num(amount);
     if (!phone.trim()) {
@@ -265,9 +246,51 @@ export function WalletScreen() {
     }
   }
 
-  function openTransfer() {
-    (navigation as { navigate: (n: string) => void }).navigate('WalletTransfers');
+  async function onSavingsToBucket() {
+    const a = num(amount);
+    if (!Number.isFinite(a) || a <= 0) {
+      Alert.alert('Savings', 'Enter a valid amount in UGX.');
+      return;
+    }
+    try {
+      setSavingsBusy(true);
+      await depositToSavings({ amount: a, description: 'Move to savings' });
+      setModal(null);
+      setAmount('');
+      Alert.alert('Savings', `Moved ${fmtMoney(a, currency)} to savings.`);
+      void loadWallet();
+      void refreshTxPreview();
+    } catch (e) {
+      const msg = e instanceof AutexaApiError ? e.message : 'Could not move to savings';
+      Alert.alert('Savings', msg);
+    } finally {
+      setSavingsBusy(false);
+    }
   }
+
+  async function onSavingsToWallet() {
+    const a = num(amount);
+    if (!Number.isFinite(a) || a <= 0) {
+      Alert.alert('Savings', 'Enter a valid amount in UGX.');
+      return;
+    }
+    try {
+      setSavingsBusy(true);
+      await withdrawFromSavings({ amount: a, description: 'Move to wallet' });
+      setModal(null);
+      setAmount('');
+      Alert.alert('Savings', `Moved ${fmtMoney(a, currency)} to wallet.`);
+      void loadWallet();
+      void refreshTxPreview();
+    } catch (e) {
+      const msg = e instanceof AutexaApiError ? e.message : 'Could not move to wallet';
+      Alert.alert('Savings', msg);
+    } finally {
+      setSavingsBusy(false);
+    }
+  }
+
+  const modalBusy = topupBusy || withdrawBusy || savingsBusy;
 
   return (
     <ScreenScroll edges={['top', 'left', 'right']} contentContainerStyle={styles.scrollPad}>
@@ -319,12 +342,12 @@ export function WalletScreen() {
           <View style={styles.iconRow}>
             <Pressable
               style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
-              onPress={() => !locked && setModal('deposit')}
+              onPress={() => !locked && setModal('topup')}
               disabled={locked || !isAutexaApiConfigured()}
               accessibilityRole="button"
-              accessibilityLabel="Deposit"
+              accessibilityLabel="Top up"
             >
-              <Ionicons name="arrow-down-circle" size={32} color={colors.primary} />
+              <Ionicons name="arrow-up-circle" size={34} color={colors.primary} />
             </Pressable>
             <Pressable
               style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
@@ -333,25 +356,16 @@ export function WalletScreen() {
               accessibilityRole="button"
               accessibilityLabel="Withdraw"
             >
-              <Ionicons name="arrow-up-circle" size={32} color={colors.primary} />
+              <Ionicons name="arrow-down-circle" size={34} color={colors.primary} />
             </Pressable>
             <Pressable
               style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
-              onPress={() => !locked && openTransfer()}
+              onPress={() => !locked && setModal('savings')}
               disabled={locked || !isAutexaApiConfigured()}
               accessibilityRole="button"
-              accessibilityLabel="Transfer"
+              accessibilityLabel="Savings"
             >
-              <Ionicons name="swap-horizontal" size={30} color={colors.primary} />
-            </Pressable>
-            <Pressable
-              style={[styles.iconCircle, locked && styles.iconCircleDisabled]}
-              onPress={() => !locked && setModal('card')}
-              disabled={locked || !isAutexaApiConfigured()}
-              accessibilityRole="button"
-              accessibilityLabel="Card payment"
-            >
-              <Ionicons name="card" size={28} color={colors.primary} />
+              <MaterialCommunityIcons name="piggy-bank-outline" size={32} color={colors.primary} />
             </Pressable>
           </View>
 
@@ -399,11 +413,14 @@ export function WalletScreen() {
       ) : null}
 
       <Modal visible={modal != null} transparent animationType="fade">
-        <Pressable style={styles.modalBackdrop} onPress={() => !topupBusy && !withdrawBusy && setModal(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => !modalBusy && setModal(null)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>
-              {modal === 'deposit' ? 'Deposit' : modal === 'withdraw' ? 'Withdraw' : 'Card top-up'}
+              {modal === 'topup' ? 'Top up' : modal === 'withdraw' ? 'Withdraw' : 'Savings'}
             </Text>
+            {modal === 'savings' ? (
+              <Text style={styles.modalHint}>Move money between your wallet balance and savings.</Text>
+            ) : null}
             <TextField
               label="Amount (UGX)"
               keyboardType="number-pad"
@@ -411,7 +428,7 @@ export function WalletScreen() {
               value={amount}
               onChangeText={setAmount}
             />
-            {modal !== 'card' ? (
+            {modal === 'topup' || modal === 'withdraw' ? (
               <TextField
                 label="Phone number"
                 keyboardType="phone-pad"
@@ -420,19 +437,28 @@ export function WalletScreen() {
                 onChangeText={setPhone}
               />
             ) : null}
-            {modal === 'deposit' ? (
-              <PrimaryButton title="Continue" onPress={() => void onTopup()} loading={topupBusy} />
+            {modal === 'topup' ? (
+              <PrimaryButton title="Request top-up" onPress={() => void onTopup()} loading={topupBusy} />
             ) : null}
             {modal === 'withdraw' ? (
-              <PrimaryButton title="Withdraw" onPress={() => void onWithdraw()} loading={withdrawBusy} />
+              <PrimaryButton title="Withdraw to phone" onPress={() => void onWithdraw()} loading={withdrawBusy} />
             ) : null}
-            {modal === 'card' ? (
-              <PrimaryButton title="Pay with card" onPress={() => void onCardTopup()} loading={topupBusy} />
+            {modal === 'savings' ? (
+              <>
+                <PrimaryButton title="Move to savings" onPress={() => void onSavingsToBucket()} loading={savingsBusy} />
+                <PrimaryButton
+                  title="Move to wallet"
+                  variant="outline"
+                  onPress={() => void onSavingsToWallet()}
+                  loading={savingsBusy}
+                  style={styles.modalSecondBtn}
+                />
+              </>
             ) : null}
             <PrimaryButton
               title="Cancel"
               variant="outline"
-              onPress={() => !topupBusy && !withdrawBusy && setModal(null)}
+              onPress={() => !modalBusy && setModal(null)}
               style={styles.modalCancel}
             />
           </Pressable>
@@ -483,14 +509,15 @@ const styles = StyleSheet.create({
   lockText: { flex: 1, color: colors.danger, fontSize: 14, fontWeight: '600' },
   iconRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xs,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.lg,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.primaryMuted,
     borderWidth: 1,
     borderColor: 'rgba(23,94,163,0.2)',
@@ -540,6 +567,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  modalHint: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
+  modalSecondBtn: { marginTop: spacing.sm },
   modalCancel: { marginTop: spacing.sm },
 });
