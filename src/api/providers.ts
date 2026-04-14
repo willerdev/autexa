@@ -9,6 +9,11 @@ export type ProviderRow = {
   location: string;
   is_available: boolean;
   base_price_cents?: number | null;
+  lat?: number | null;
+  lng?: number | null;
+  is_product_business?: boolean;
+  phone?: string | null;
+  working_days?: string | null;
 };
 
 function parseDistanceKm(location: string): number {
@@ -33,13 +38,18 @@ export function mapProviderRow(row: ProviderRow): Provider {
     specialty: row.service_type,
     location: row.location,
     basePriceCents: cents,
+    lat: row.lat ?? null,
+    lng: row.lng ?? null,
+    isProductBusiness: Boolean(row.is_product_business),
+    phone: typeof row.phone === 'string' ? row.phone : '',
+    workingDays: typeof row.working_days === 'string' ? row.working_days : '',
   };
 }
 
 export async function listAvailableProviders(): Promise<{ data: Provider[]; error: Error | null }> {
   const { data, error } = await supabase
     .from('providers')
-    .select('id,name,service_type,rating,location,is_available,base_price_cents')
+    .select('id,name,service_type,rating,location,is_available,base_price_cents,lat,lng,is_product_business,phone,working_days')
     .eq('is_available', true)
     .order('rating', { ascending: false });
   if (error) return { data: [], error: new Error(error.message) };

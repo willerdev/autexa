@@ -4,6 +4,7 @@ import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookingsScreen } from '../screens/main/BookingsScreen';
 import { HomeScreen } from '../screens/main/HomeScreen';
+import { MapScreen } from '../screens/main/MapScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { MyCarsScreen } from '../screens/flow/MyCarsScreen';
 import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
@@ -16,6 +17,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const iconFor: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
+  Map: 'map-outline',
   Bookings: 'calendar-outline',
   MyCars: 'car-outline',
   ProviderServicesTab: 'briefcase-outline',
@@ -48,6 +50,7 @@ export function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
       <Tab.Screen
         name="Bookings"
         component={BookingsScreen}

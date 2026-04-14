@@ -103,6 +103,18 @@ module.exports = {
           backgroundColor: '#175EA3',
         },
       ],
+      [
+        '@rnmapbox/maps',
+        {
+          RNMapboxMapsVersion: '11.20.1',
+        },
+      ],
+      [
+        'expo-location',
+        {
+          locationWhenInUsePermission: 'Allow Autexa to use your location to show nearby providers on the map.',
+        },
+      ],
       'expo-web-browser',
       'expo-notifications',
       'expo-font',
@@ -119,6 +131,7 @@ module.exports = {
       supportUserId: readPublicEnv('EXPO_PUBLIC_SUPPORT_USER_ID'),
       autexaApiUrl: normalizeAutexaApiUrlBase(readPublicEnv('EXPO_PUBLIC_AUTEXA_API_URL')),
       webAppUrl: readPublicEnv('EXPO_PUBLIC_WEB_APP_URL'),
+      mapboxPublicToken: readPublicEnv('EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN'),
     },
   },
 };

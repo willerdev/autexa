@@ -27,6 +27,7 @@ type Extra = {
   supportUserId?: string;
   autexaApiUrl?: string;
   webAppUrl?: string;
+  mapboxPublicToken?: string;
 };
 
 function normalizeAutexaApiUrl(url: string): string {
@@ -89,6 +90,10 @@ export const env = {
   webAppUrl: stripOuterQuotes(
     trimEnv(process.env.EXPO_PUBLIC_WEB_APP_URL) || trimEnv(readExtra().webAppUrl) || '',
   ).replace(/\/$/, ''),
+  /** Mapbox public token (starts with `pk.`). Do not use secret `sk.` tokens in the client. */
+  mapboxPublicToken: stripOuterQuotes(
+    trimEnv(process.env.EXPO_PUBLIC_MAPBOX_PUBLIC_TOKEN) || trimEnv(readExtra().mapboxPublicToken) || '',
+  ),
 };
 
 export function isSupabaseConfigured(): boolean {

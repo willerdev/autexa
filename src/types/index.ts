@@ -24,6 +24,15 @@ export type Provider = {
   location?: string;
   /** From `providers.base_price_cents` when loaded from API. */
   basePriceCents?: number;
+  /** For Map + detail page (optional if not yet backfilled). */
+  lat?: number | null;
+  lng?: number | null;
+  /** Switches detail layout. */
+  isProductBusiness?: boolean;
+  /** Public contact info set on provider profile. */
+  phone?: string;
+  /** Human-readable e.g. \"Mon–Sat 9am–6pm\". */
+  workingDays?: string;
   aiRecommended?: boolean;
   aiReason?: string;
 };
@@ -60,6 +69,7 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
+  Map: undefined;
   Bookings: undefined;
   MyCars: undefined;
   ProviderServicesTab: undefined;
@@ -95,6 +105,7 @@ export type AppStackParamList = {
   ProviderServices: undefined;
   ProviderServiceEdit: { serviceId?: string } | undefined;
   ProviderBookings: undefined;
+  BusinessDetail: { providerId: string };
   Wallet: undefined;
   WalletTransactions: undefined;
   WalletPayees: undefined;

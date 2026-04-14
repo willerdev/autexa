@@ -10,16 +10,12 @@ import {
   View,
 } from 'react-native';
 import {
-  CategoryPill,
   HomeSearchModal,
-  ProviderHeroCard,
-  QuickActionTile,
   SearchBar,
-  SectionHeader,
   defaultFilters,
   type HomeSearchFilters,
 } from '../../components';
-import { categories, quickServices, servicesForSelect } from '../../data/mockData';
+import { servicesForSelect } from '../../data/mockData';
 import type { MainTabParamList, Provider } from '../../types';
 import { navigateAppStack } from '../../utils/navigation';
 import { colors, radius, spacing } from '../../theme';
@@ -74,12 +70,27 @@ function applyBrowseFilters(list: Provider[], q: string, f: HomeSearchFilters): 
   return out;
 }
 
-const PLACEHOLDER_TINT = ['#D4DDE8', '#DCD6E4', '#D5E0DA', '#E5DFD4'] as const;
+const SERVICE_BADGE_BG = '#FF8A3D';
 
-function exploreTint(id: string): string {
+function tintForId(id: string): string {
+  const tints = ['#DCE4EE', '#E5E0EB', '#E0E8E4', '#EEE8DC', '#E8E2DC'] as const;
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return PLACEHOLDER_TINT[h % PLACEHOLDER_TINT.length];
+  return tints[h % tints.length];
+}
+
+function toServiceTypeTabs(providers: Provider[]): { id: string; label: string }[] {
+  const counts = new Map<string, number>();
+  for (const p of providers) {
+    const key = String(p.specialty || '').trim();
+    if (!key) continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const sorted = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name]) => ({ id: name, label: name }));
+  return [{ id: 'all', label: 'All' }, ...sorted];
 }
 
 export function ClientManualBrowseHome({
@@ -92,23 +103,23 @@ export function ClientManualBrowseHome({
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<HomeSearchFilters>(defaultFilters);
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-
-  const quick = useMemo(
-    () =>
-      quickServices.map((s) => ({
-        ...s,
-        icon: s.id === 'wash' ? 'water-outline' : s.id === 'mechanic' ? 'construct-outline' : 'car-outline',
-      })) as { id: string; name: string; icon: 'water-outline' | 'construct-outline' | 'car-outline' }[],
-    [],
-  );
+  const [activeTab, setActiveTab] = useState('all');
 
   const filtered = useMemo(
     () => applyBrowseFilters(providers, query, appliedFilters),
     [providers, query, appliedFilters],
   );
 
-  const explore = useMemo(() => providers.slice(0, 8), [providers]);
+  const tabs = useMemo(() => toServiceTypeTabs(providers), [providers]);
+  const filteredByTab = useMemo(() => {
+    if (activeTab === 'all') return filtered;
+    const q = activeTab.toLowerCase();
+    return filtered.filter((p) => p.specialty.toLowerCase().includes(q) || q.includes(p.specialty.toLowerCase()));
+  }, [filtered, activeTab]);
+
+  const sortedPopular = useMemo(() => {
+    return [...filteredByTab].sort((a, b) => b.rating - a.rating);
+  }, [filteredByTab]);
 
   const chipDefs = [
     { id: 'location' as const, label: 'Location', on: appliedFilters.locationQuery.trim().length > 0 },
@@ -123,10 +134,15 @@ export function ClientManualBrowseHome({
       serviceName: item.specialty,
     });
 
+  const openBusiness = (item: Provider) =>
+    navigateAppStack(navigation, 'BusinessDetail', {
+      providerId: item.id,
+    });
+
   return (
     <View style={styles.root}>
       <View style={styles.manualTopRow}>
-        <Text style={styles.manualTitle}>Browse</Text>
+        <Text style={styles.manualTitle}>Most Popular Services</Text>
         <Pressable onPress={onUseAi} hitSlop={8}>
           <Text style={styles.backToAi}>Use AI instead</Text>
         </Pressable>
@@ -161,81 +177,91 @@ export function ClientManualBrowseHome({
         ))}
       </ScrollView>
 
-      <SectionHeader title="Recently explored" />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.exploreRow}
+        contentContainerStyle={styles.tabsRow}
       >
-        {explore.map((p) => (
-          <Pressable
-            key={p.id}
-            onPress={() => openBooking(p)}
-            style={({ pressed }) => [styles.exploreCard, pressed && styles.exploreCardPressed]}
-          >
-            <View style={[styles.exploreImage, { backgroundColor: exploreTint(p.id) }]}>
-              <View style={styles.exploreBadge}>
-                <Text style={styles.exploreBadgeText}>Popular</Text>
-              </View>
-              <Ionicons name="car-sport-outline" size={40} color="rgba(24,24,27,0.2)" style={styles.exploreIcon} />
-              <View style={styles.exploreOverlay}>
-                <Text style={styles.exploreTitle} numberOfLines={1}>
-                  {p.name}
-                </Text>
-                <Text style={styles.exploreMeta} numberOfLines={1}>
-                  {p.specialty}
-                </Text>
-              </View>
-            </View>
-          </Pressable>
-        ))}
+        {tabs.map((t) => {
+          const on = t.id === activeTab;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setActiveTab(t.id)}
+              style={({ pressed }) => [styles.tab, on ? styles.tabOn : styles.tabOff, pressed && styles.tabPressed]}
+            >
+              <Text style={[styles.tabText, on ? styles.tabTextOn : styles.tabTextOff]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-      <SectionHeader title="Categories" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
-        {categories.map((c) => (
-          <CategoryPill
-            key={c.id}
-            item={c}
-            onPress={() => navigateAppStack(navigation, 'SelectService', { categoryId: c.id })}
-          />
-        ))}
-      </ScrollView>
-
-      <SectionHeader title="Quick actions" />
-      <View style={styles.quickRow}>
-        {quick.map((q) => (
-          <View key={q.id} style={styles.quickCell}>
-            <QuickActionTile
-              title={q.name}
-              icon={q.icon}
-              onPress={() => navigateAppStack(navigation, 'SelectService', { preselectServiceId: q.id })}
-            />
-          </View>
-        ))}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Explore</Text>
+        <Pressable
+          onPress={() =>
+            navigateAppStack(navigation, 'ProviderList', {
+              serviceName: activeTab === 'all' ? 'All services' : activeTab,
+            })
+          }
+          hitSlop={8}
+        >
+          <Text style={styles.sectionAction}>See all</Text>
+        </Pressable>
       </View>
-
-      <SectionHeader
-        title="Popular near you"
-        actionLabel="See all"
-        onAction={() => navigateAppStack(navigation, 'ProviderList', { serviceName: 'All services' })}
-      />
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : (
         <FlatList
-          data={filtered}
+          data={sortedPopular}
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
           renderItem={({ item }) => (
-            <ProviderHeroCard
-              provider={item}
-              favorited={!!favorites[item.id]}
-              onToggleFavorite={() =>
-                setFavorites((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-              }
-              onPress={() => openBooking(item)}
-            />
+            <View style={styles.card}>
+              <View style={styles.cardTop}>
+                <View style={[styles.avatar, { backgroundColor: tintForId(item.id) }]}>
+                  <Ionicons name="person-outline" size={26} color="rgba(24,24,27,0.25)" />
+                </View>
+                <View style={styles.cardMain}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText} numberOfLines={1}>
+                        {item.specialty}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.cardPrice} numberOfLines={1}>
+                    {item.priceEstimate}
+                  </Text>
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={14} color={colors.star} />
+                    <Text style={styles.ratingText}>
+                      {item.rating.toFixed(1)} ({item.reviewCount} reviews)
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.btnRow}>
+                <Pressable
+                  onPress={() => openBusiness(item)}
+                  style={({ pressed }) => [styles.outlineBtn, pressed && styles.btnPressed]}
+                >
+                  <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.outlineBtnText}>View Profile</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => openBooking(item)}
+                  style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                >
+                  <Ionicons name="calendar-outline" size={16} color="#fff" />
+                  <Text style={styles.primaryBtnText}>Book Now</Text>
+                </Pressable>
+              </View>
+            </View>
           )}
           ListEmptyComponent={
             <Text style={styles.empty}>
@@ -267,7 +293,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   manualTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.text,
   },
@@ -300,81 +326,168 @@ const styles = StyleSheet.create({
   homeChipTextOn: {
     color: colors.surface,
   },
-  hRow: {
-    paddingBottom: spacing.sm,
+  tabsRow: {
     gap: spacing.sm,
-  },
-  quickRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -spacing.xs,
-  },
-  quickCell: {
-    width: '50%',
-    paddingHorizontal: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  exploreRow: {
-    gap: spacing.md,
     paddingBottom: spacing.md,
     paddingRight: spacing.md,
   },
-  exploreCard: {
-    width: 168,
-  },
-  exploreCardPressed: {
-    opacity: 0.92,
-  },
-  exploreImage: {
-    height: 200,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    position: 'relative',
+  tab: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: radius.pill,
     borderWidth: 1,
+  },
+  tabOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  tabOff: {
+    backgroundColor: colors.surface,
     borderColor: colors.border,
   },
-  exploreBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    zIndex: 2,
+  tabPressed: {
+    opacity: 0.92,
   },
-  exploreBadgeText: {
-    fontSize: 11,
+  tabText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  tabTextOn: {
+    color: '#fff',
+  },
+  tabTextOff: {
+    color: colors.textSecondary,
+  },
+  sectionRow: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '800',
     color: colors.text,
   },
-  exploreIcon: {
-    position: 'absolute',
-    alignSelf: 'center',
-    top: '36%',
-  },
-  exploreOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: 'rgba(24,24,27,0.5)',
-  },
-  exploreTitle: {
-    fontSize: 15,
+  sectionAction: {
+    fontSize: 13,
     fontWeight: '800',
-    color: '#fff',
-  },
-  exploreMeta: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.88)',
+    color: colors.primary,
   },
   loader: {
     marginVertical: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  cardTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 16,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  badge: {
+    maxWidth: 120,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: SERVICE_BADGE_BG,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  cardPrice: {
+    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  ratingText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  btnRow: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  outlineBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  outlineBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.textSecondary,
+  },
+  primaryBtn: {
+    flex: 1,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.primary,
+  },
+  primaryBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  btnPressed: {
+    opacity: 0.92,
   },
   empty: {
     textAlign: 'center',

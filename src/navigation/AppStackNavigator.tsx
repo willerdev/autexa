@@ -15,6 +15,7 @@ import { ProviderCategoriesScreen } from '../screens/provider/ProviderCategories
 import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
 import { ProviderServiceEditScreen } from '../screens/provider/ProviderServiceEditScreen';
 import { ProviderBookingsScreen } from '../screens/provider/ProviderBookingsScreen';
+import { BusinessDetailScreen } from '../screens/flow/BusinessDetailScreen';
 import { WalletScreen } from '../screens/flow/WalletScreen';
 import { WalletPayeesScreen } from '../screens/flow/WalletPayeesScreen';
 import { WalletPaymentLinksScreen } from '../screens/flow/WalletPaymentLinksScreen';
@@ -80,6 +81,7 @@ export function AppStackNavigator() {
       <Stack.Screen name="ProviderServices" component={ProviderServicesScreen} options={{ title: 'Services' }} />
       <Stack.Screen name="ProviderServiceEdit" component={ProviderServiceEditScreen} options={{ title: 'Edit service' }} />
       <Stack.Screen name="ProviderBookings" component={ProviderBookingsScreen} options={{ title: 'Bookings' }} />
+      <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: 'Business' }} />
       <Stack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
       <Stack.Screen name="WalletTransactions" component={WalletTransactionsScreen} options={{ title: 'Transactions' }} />
       <Stack.Screen name="WalletPayees" component={WalletPayeesScreen} options={{ title: 'Saved payees' }} />

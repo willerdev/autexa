@@ -7,6 +7,11 @@ export type PublicProviderDetail = {
   rating: number;
   location: string;
   base_price_cents: number;
+  is_product_business?: boolean;
+  phone?: string;
+  working_days?: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export type PublicServiceDetail = {
@@ -66,7 +71,7 @@ export async function fetchPublicProvider(providerId: string): Promise<{
 }> {
   const { data, error } = await supabase
     .from('providers')
-    .select('id,name,service_type,rating,location,base_price_cents')
+    .select('id,name,service_type,rating,location,base_price_cents,is_product_business,phone,working_days,lat,lng')
     .eq('id', providerId)
     .maybeSingle();
 
@@ -81,6 +86,11 @@ export async function fetchPublicProvider(providerId: string): Promise<{
       rating: Number(row.rating) || 4.5,
       location: (row.location as string) ?? '',
       base_price_cents: Number(row.base_price_cents) || 0,
+      is_product_business: Boolean(row.is_product_business),
+      phone: typeof row.phone === 'string' ? row.phone : '',
+      working_days: typeof row.working_days === 'string' ? row.working_days : '',
+      lat: typeof row.lat === 'number' ? (row.lat as number) : null,
+      lng: typeof row.lng === 'number' ? (row.lng as number) : null,
     },
     error: null,
   };
