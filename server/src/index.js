@@ -18,7 +18,11 @@ import { serviceCatalogRouter } from './routes/serviceCatalog.js';
 import { paymentLinksPublicRouter } from './routes/paymentLinksPublic.js';
 import { savingsChallengesRouter } from './routes/savingsChallenges.js';
 import { walletRouter } from './routes/wallet.js';
+import { referralsRouter } from './routes/referrals.js';
+import { twofaRouter } from './routes/twofa.js';
+import { subscriptionsRouter } from './routes/subscriptions.js';
 import { completePendingTopupByTxRef, creditWallet } from './services/walletService.js';
+import { completeSubscriptionByTxRef } from './services/subscriptionsService.js';
 
 // Load server/.env from this package root (not process.cwd()) so FLUTTERWAVE_* etc. load
 // when the API is started from the monorepo root or any other working directory.
@@ -61,6 +65,7 @@ app.post('/api/webhooks/flutterwave', express.json({ limit: '2mb' }), async (req
     ) {
       await completeBookingPaymentFromTxRef(txRef, payload);
       await completePendingTopupByTxRef(txRef);
+      await completeSubscriptionByTxRef(txRef, payload);
     }
   } catch (e) {
     console.error('[flutterwave webhook] handler', e);
@@ -187,6 +192,9 @@ app.use('/api/push', pushRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/savings-challenges', savingsChallengesRouter);
+app.use('/api/referrals', referralsRouter);
+app.use('/api/2fa', twofaRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 app.post('/api/payments/mobile-money-placeholder', (_req, res) => {
   res.status(501).json({

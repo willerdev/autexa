@@ -10,6 +10,8 @@ export type UserProfile = {
   phone: string | null;
   created_at: string;
   role?: 'user' | 'provider' | 'admin' | string;
+  twofaEnabled?: boolean;
+  twofaPhone?: string | null;
 };
 
 type SessionState = {

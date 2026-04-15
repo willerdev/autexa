@@ -17,6 +17,7 @@ import {
 } from '../src/services/notifyChannels.js';
 import { toUgandaE164 } from '../src/lib/phoneE164.js';
 import { sendSmsIfConfigured } from '../src/lib/twilioSms.js';
+import { requireSmsAccess } from '../src/services/subscriptionsService.js';
 
 function getServiceClient() {
   return createServiceClient();
@@ -126,6 +127,23 @@ export const TOOL_DEFINITIONS = [
         user_id: { type: SchemaType.STRING, description: 'The authenticated user UUID' },
       },
       ['user_id'],
+    ),
+  },
+  {
+    name: 'update_user_profile',
+    description: `Updates the authenticated user's profile fields (name, phone). Use ONLY after the user explicitly confirms the exact changes.
+Never store secrets. Do not change other fields.`,
+    parameters: objectSchema(
+      {
+        user_id: { type: SchemaType.STRING, description: 'The authenticated user UUID' },
+        name: { type: SchemaType.STRING, description: 'Optional new name' },
+        phone: { type: SchemaType.STRING, description: 'Optional new phone number (Uganda recommended)' },
+        user_confirmed: {
+          type: SchemaType.BOOLEAN,
+          description: 'Must be true only after the user clearly confirmed this profile update.',
+        },
+      },
+      ['user_id', 'user_confirmed'],
     ),
   },
   {
@@ -692,6 +710,41 @@ export const TOOL_EXECUTORS = {
       ai_notes: ai?.notes ?? null,
       learned_memories,
     };
+  },
+
+  update_user_profile: async ({ user_id, name, phone, user_confirmed }) => {
+    if (!user_confirmed) {
+      return { error: 'Confirmation required. Ask the user to confirm before updating their profile.' };
+    }
+    const supabase = getServiceClient();
+    const uid = String(user_id || '').trim();
+    if (!uid) return { error: 'user_id is required' };
+
+    const patch = {};
+    if (typeof name === 'string' && name.trim()) {
+      patch.name = name.trim().slice(0, 120);
+    }
+    if (typeof phone === 'string') {
+      const raw = phone.trim();
+      if (raw) {
+        const normalized = toUgandaE164(raw) || raw;
+        patch.phone = String(normalized).slice(0, 32);
+      }
+    }
+    if (!Object.keys(patch).length) {
+      return { error: 'No changes provided. Provide name and/or phone.' };
+    }
+
+    const { error } = await supabase.from('users').update(patch).eq('id', uid);
+    if (error) throw new Error(`update_user_profile failed: ${error.message}`);
+
+    const { data: u, error: uErr } = await supabase
+      .from('users')
+      .select('id,name,email,phone,role')
+      .eq('id', uid)
+      .maybeSingle();
+    if (uErr) throw new Error(`update_user_profile readback failed: ${uErr.message}`);
+    return { ok: true, user: u ?? null };
   },
 
   get_provider_services: async ({ provider_id }) => {
@@ -1486,6 +1539,7 @@ export const TOOL_EXECUTORS = {
   },
 
   send_uganda_sms: async ({ user_id, phone_number, message, user_confirmed }) => {
+    await requireSmsAccess(String(user_id));
     const confirmed =
       user_confirmed === true || String(user_confirmed ?? '').toLowerCase() === 'true';
     if (!confirmed) {

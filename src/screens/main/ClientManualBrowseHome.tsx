@@ -1,15 +1,8 @@
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import React, { useMemo, useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
+  BrowseHomeSkeleton,
   HomeSearchModal,
   SearchBar,
   defaultFilters,
@@ -22,12 +15,14 @@ import { colors, radius, spacing } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = {
-  navigation: BottomTabNavigationProp<MainTabParamList, 'Home'>;
+  navigation: BottomTabNavigationProp<MainTabParamList, keyof MainTabParamList>;
   query: string;
   setQuery: (q: string) => void;
   onUseAi: () => void;
   providers: Provider[];
   loading: boolean;
+  /** When true, hides the AI shortcut — used on the Explore tab (manual provider browse only). */
+  exploreMode?: boolean;
 };
 
 function matchesCategory(p: Provider, categoryId: string | null): boolean {
@@ -100,6 +95,7 @@ export function ClientManualBrowseHome({
   onUseAi,
   providers,
   loading,
+  exploreMode = false,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<HomeSearchFilters>(defaultFilters);
@@ -142,10 +138,12 @@ export function ClientManualBrowseHome({
   return (
     <View style={styles.root}>
       <View style={styles.manualTopRow}>
-        <Text style={styles.manualTitle}>Most Popular Services</Text>
-        <Pressable onPress={onUseAi} hitSlop={8}>
-          <Text style={styles.backToAi}>Use AI instead</Text>
-        </Pressable>
+        <Text style={styles.manualTitle}>{exploreMode ? 'Explore providers' : 'Most Popular Services'}</Text>
+        {!exploreMode ? (
+          <Pressable onPress={onUseAi} hitSlop={8}>
+            <Text style={styles.backToAi}>Use AI instead</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <SearchBar
@@ -210,7 +208,7 @@ export function ClientManualBrowseHome({
         </Pressable>
       </View>
       {loading ? (
-        <ActivityIndicator style={styles.loader} color={colors.primary} />
+        <BrowseHomeSkeleton />
       ) : (
         <FlatList
           data={sortedPopular}
@@ -374,9 +372,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: colors.primary,
-  },
-  loader: {
-    marginVertical: spacing.lg,
   },
   card: {
     backgroundColor: colors.surface,

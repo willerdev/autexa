@@ -9,6 +9,7 @@ import { clearBookingBillPreviewState } from '../lib/bookingBillPreview.js';
 import { runGeminiChat } from '../../utils/geminiChat.js';
 import { getApiFlags } from '../lib/adminFeatureFlags.js';
 import { PROMPTS, systemWithUserContext } from '../../utils/prompts.js';
+import { requireAiQuota } from '../services/subscriptionsService.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -102,6 +103,12 @@ aiRouter.post('/chat', async (req, res) => {
   try {
     const { message, messages } = req.body ?? {};
     if (typeof message === 'string' && message.trim()) {
+      try {
+        await requireAiQuota(req.user.id);
+      } catch (e) {
+        const status = Number(e?.statusCode) || 402;
+        return res.status(status).json({ error: e?.message || 'Upgrade required' });
+      }
       if (rateLimitHit(`ai-chat:${req.user.id}`, { limit: 30, windowMs: 60_000 })) {
         return res.status(429).json({
           error: 'Too many requests. Please wait a minute and try again.',

@@ -56,16 +56,10 @@ function normalizeAutexaApiUrl(url: string): string {
 }
 
 function readExtra(): Extra {
+  const fromManifest = (Constants.manifest as { extra?: Extra } | null)?.extra;
   const fromExpo = Constants.expoConfig?.extra as Extra | undefined;
-  if (fromExpo?.supabaseUrl?.trim() && fromExpo?.supabaseAnonKey?.trim()) {
-    return fromExpo;
-  }
-  const fromManifest = Constants.manifest as { extra?: Extra } | null;
-  const m = fromManifest?.extra;
-  if (m?.supabaseUrl?.trim() && m?.supabaseAnonKey?.trim()) {
-    return m;
-  }
-  return fromExpo ?? m ?? {};
+  /** Merge so Mapbox / API keys from `app.config.js` `extra` survive even if only one source defines Supabase. */
+  return { ...fromManifest, ...fromExpo };
 }
 
 /**

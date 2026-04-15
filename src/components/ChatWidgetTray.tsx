@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { postAssistantChatAttachment } from '../api/assistantMedia';
+import { navigateToAppStack } from '../navigation/navigateFromRoot';
 import { colors, radius, spacing } from '../theme';
 import { formatDateChipLabel, toLocalDateString } from '../utils/dateFormat';
 import type { ChatWidgetSpec } from '../types/chatWidgets';
@@ -301,6 +302,21 @@ export function ChatWidgetTray({
                 </Pressable>
               ))}
             </View>
+          ) : null}
+          {w.type === 'map_focus' ? (
+            <Pressable
+              style={[styles.btn, disabled && styles.btnDisabled]}
+              disabled={disabled}
+              onPress={() => {
+                const pid = String(w.provider_id || '').trim();
+                const lat = typeof w.lat === 'number' ? w.lat : undefined;
+                const lng = typeof w.lng === 'number' ? w.lng : undefined;
+                navigateToAppStack('Map', pid ? { providerId: pid } : lat != null && lng != null ? { lat, lng } : undefined);
+              }}
+            >
+              <Ionicons name="map-outline" size={20} color={colors.primary} />
+              <Text style={styles.btnText}>Open map</Text>
+            </Pressable>
           ) : null}
         </View>
       ))}

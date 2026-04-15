@@ -13,6 +13,8 @@ export async function fetchProfile(userId: string): Promise<{ data: UserProfile 
       phone: data.phone ?? null,
       created_at: data.created_at,
       role: (data as { role?: string }).role ?? 'user',
+      twofaEnabled: Boolean((data as { twofa_enabled?: boolean }).twofa_enabled),
+      twofaPhone: (data as { twofa_phone?: string | null }).twofa_phone ?? null,
     },
     error: null,
   };

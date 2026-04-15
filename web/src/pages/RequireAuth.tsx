@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { UserSessionContext } from '../context/UserSessionContext';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
-export default function RequireAuth({ children }: { children: React.ReactNode }) {
+export default function RequireAuth({ children }: { children: any }) {
   const loc = useLocation();
   const [phase, setPhase] = useState<'loading' | 'in' | 'out'>('loading');
   const [token, setToken] = useState('');

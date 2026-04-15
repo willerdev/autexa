@@ -69,11 +69,10 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Map: undefined;
+  Explore: undefined;
   Bookings: undefined;
   MyCars: undefined;
   ProviderServicesTab: undefined;
-  Wallet: undefined;
   Profile: undefined;
 };
 
@@ -105,6 +104,8 @@ export type AppStackParamList = {
   ProviderServices: undefined;
   ProviderServiceEdit: { serviceId?: string } | undefined;
   ProviderBookings: undefined;
+  ProviderAddBusiness: undefined;
+  AddUnclaimedBusiness: undefined;
   BusinessDetail: { providerId: string };
   Wallet: undefined;
   WalletTransactions: undefined;
@@ -114,6 +115,10 @@ export type AppStackParamList = {
   WalletTransfers: undefined;
   SavingsChallenges: undefined;
   SavingsChallengeDetail: { challengeId: string };
+  Map: { providerId?: string; lat?: number; lng?: number } | undefined;
+  EditProfile: undefined;
+  TwoFactorSettings: undefined;
+  Subscription: undefined;
 };
 
 export type RootStackParamList = {

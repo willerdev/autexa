@@ -22,6 +22,40 @@ Right now `providers.location` is text (e.g. “Kampala, Ntinda”), so you need
 2. Add `lat` and `lng` columns.
 3. Import back into Supabase with **Upsert** enabled.
 
+## Demo pin (migration)
+
+Migration [`20260415180000_seed_map_demo_provider.sql`](../supabase/migrations/20260415180000_seed_map_demo_provider.sql) inserts a fixed-id demo provider (`aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`) with coordinates near Kampala so the Map tab always has at least one test pin after `supabase db push` (or applying migrations in the dashboard).
+
+## Optional: pin tied to your admin user
+
+`providers.user_id` must match your `auth.users.id` (same as `public.users.id`). Only one provider row per `user_id` is allowed (partial unique index).
+
+Run in the Supabase SQL editor (replace the UUID with yours from **Authentication → Users**):
+
+```sql
+insert into public.providers (
+  name, service_type, rating, location, is_available, user_id, lat, lng, base_price_cents
+)
+values (
+  'My admin test shop',
+  'Diagnostics',
+  4.8,
+  'Demo',
+  true,
+  '00000000-0000-0000-0000-000000000000'::uuid,  -- your auth user id
+  0.3476,
+  32.5825,
+  12000
+)
+on conflict (user_id) do update set
+  lat = excluded.lat,
+  lng = excluded.lng,
+  name = excluded.name,
+  is_available = excluded.is_available;
+```
+
+If the insert fails because a conflicting index is not found, use `update public.providers set lat = 0.3476, lng = 32.5825 where user_id = '...'::uuid;` when the row already exists.
+
 ## Notes
 
 - If a provider has no `lat/lng`, it will not show on the map (by design).

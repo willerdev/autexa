@@ -326,13 +326,23 @@ INTERACTIVE UI (mandatory): Whenever your reply asks the user for a booking/appo
               type: String(w.type || '').trim(),
               label: w.label != null ? String(w.label).slice(0, 120) : undefined,
               hint: w.hint != null ? String(w.hint).slice(0, 240) : undefined,
+              provider_id: w.provider_id != null ? String(w.provider_id).trim() : undefined,
+              lat: w.lat != null && Number.isFinite(Number(w.lat)) ? Number(w.lat) : undefined,
+              lng: w.lng != null && Number.isFinite(Number(w.lng)) ? Number(w.lng) : undefined,
               max_seconds:
                 w.max_seconds != null && Number.isFinite(Number(w.max_seconds))
                   ? Math.min(60, Math.max(5, Math.floor(Number(w.max_seconds))))
                   : undefined,
             }))
             .filter((w) =>
-              ['date_picker', 'time_picker', 'photo_capture', 'audio_record', 'payment_method_picker'].includes(w.type),
+              [
+                'date_picker',
+                'time_picker',
+                'photo_capture',
+                'audio_record',
+                'payment_method_picker',
+                'map_focus',
+              ].includes(w.type),
             );
           capturedWidgets = [...(capturedWidgets ?? []), ...normalized];
           toolOutput = { ok: true, shown: normalized.length };

@@ -7,15 +7,20 @@ export type UserNotificationRow = {
   data: unknown | null;
   read_at: string | null;
   created_at: string;
+  expires_at?: string;
+  expired_at?: string | null;
 };
 
 export async function listMyNotifications(): Promise<{ data: UserNotificationRow[]; error: Error | null }> {
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (userErr || !userData.user) return { data: [], error: new Error(userErr?.message ?? 'Not signed in') };
 
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('user_notifications')
-    .select('id,title,body,data,read_at,created_at')
+    .select('id,title,body,data,read_at,created_at,expires_at,expired_at')
+    .is('expired_at', null)
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order('created_at', { ascending: false });
 
   if (error) return { data: [], error: new Error(error.message) };

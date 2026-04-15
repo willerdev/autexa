@@ -5,12 +5,14 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
+import { useSessionStore } from '../stores/sessionStore';
 import type { RootStackParamList } from '../types';
 import { colors } from '../theme';
 import { AppStackNavigator } from './AppStackNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PayGuestScreen } from '../screens/flow/PayGuestScreen';
+import { TwoFactorGateScreen } from '../screens/auth/TwoFactorGateScreen';
 
 function extractPaySlugFromUrl(url: string): string | null {
   try {
@@ -33,8 +35,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { isAuthenticated, authReady } = useAuth();
+  const profile = useSessionStore((s) => s.profile);
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const [paySlug, setPaySlug] = useState<string | null>(null);
+  const [twofaGate, setTwofaGate] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -65,6 +69,33 @@ export function RootNavigator() {
     return () => sub.remove();
   }, [authReady]);
 
+  useEffect(() => {
+    let alive = true;
+    if (!authReady || !isAuthenticated) {
+      setTwofaGate(false);
+      return;
+    }
+    const enabled = Boolean(profile?.twofaEnabled);
+    if (!enabled) {
+      setTwofaGate(false);
+      return;
+    }
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('autexa:twofa_verified_until');
+        const until = v ? Number(v) : 0;
+        if (!alive) return;
+        setTwofaGate(!(Number.isFinite(until) && until > Date.now()));
+      } catch {
+        if (!alive) return;
+        setTwofaGate(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [authReady, isAuthenticated, profile?.twofaEnabled]);
+
   if (!authReady || showOnboarding === null) {
     return (
       <SafeAreaView style={styles.boot} edges={['top', 'right', 'bottom', 'left']}>
@@ -89,6 +120,11 @@ export function RootNavigator() {
       {paySlug ? (
         <View style={styles.payOverlay} pointerEvents="auto">
           <PayGuestScreen slug={paySlug} onClose={() => setPaySlug(null)} />
+        </View>
+      ) : null}
+      {twofaGate ? (
+        <View style={styles.payOverlay} pointerEvents="auto">
+          <TwoFactorGateScreen onVerified={() => setTwofaGate(false)} />
         </View>
       ) : null}
     </>

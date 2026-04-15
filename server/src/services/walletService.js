@@ -330,6 +330,49 @@ export async function creditWallet({
   if (tErr) throw new Error(tErr.message);
 }
 
+/**
+ * System-funded wallet credit (e.g. referral bonus, promotions).
+ * Writes a completed transaction with `payment_method: system` and `initiated_by: system`.
+ */
+export async function creditWalletSystem({
+  userId,
+  amount,
+  type = 'system_credit',
+  description,
+  metadata,
+}) {
+  const supabase = sb();
+  const wallet = await getWallet(userId);
+  const before = Number(wallet.balance);
+  const add = Number(amount);
+  if (!Number.isFinite(add) || add <= 0) throw new Error('amount must be a positive number');
+  const after = before + add;
+  const now = new Date().toISOString();
+
+  const { error: wErr } = await supabase
+    .from('wallets')
+    .update({ balance: after, updated_at: now })
+    .eq('user_id', userId);
+  if (wErr) throw new Error(wErr.message);
+
+  const { error: tErr } = await supabase.from('transactions').insert({
+    wallet_id: wallet.id,
+    user_id: userId,
+    type: String(type || 'system_credit'),
+    amount: add,
+    fee: 0,
+    balance_before: before,
+    balance_after: after,
+    payment_method: 'system',
+    description: description || 'System credit',
+    initiated_by: 'system',
+    status: 'completed',
+    completed_at: now,
+    metadata: metadata && typeof metadata === 'object' ? metadata : {},
+  });
+  if (tErr) throw new Error(tErr.message);
+}
+
 export async function checkTopupStatus({ topupRequestId, userId }) {
   const supabase = sb();
   const { data: request, error } = await supabase

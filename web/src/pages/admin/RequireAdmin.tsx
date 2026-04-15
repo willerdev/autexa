@@ -4,7 +4,7 @@ import { AdminSessionContext } from '../../context/AdminSessionContext';
 import { adminFetch, ApiError } from '../../lib/api';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 
-export default function RequireAdmin({ children }: { children: React.ReactNode }) {
+export default function RequireAdmin({ children }: { children: any }) {
   const [phase, setPhase] = useState<'loading' | 'redirect' | 'deny' | 'ready'>('loading');
   const [token, setToken] = useState('');
 

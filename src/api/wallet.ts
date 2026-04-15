@@ -190,7 +190,7 @@ export async function fetchPublicPaymentLinkMeta(slug: string): Promise<PublicPa
 
 export async function postPublicPaymentLinkTopup(
   slug: string,
-  body: { amount: number; phone: string; provider: 'mtn' | 'airtel' },
+  body: { amount: number; phone: string; provider: MobileMoneyProvider },
 ) {
   return autexaPublicFetch<TopupResponse>(`/api/public/payment-link/${encodeURIComponent(slug)}/topup`, {
     method: 'POST',

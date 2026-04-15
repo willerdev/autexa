@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { deleteMyCar, listMyCars, type CarRow } from '../../api/cars';
-import { Card, PrimaryButton, ScreenScroll } from '../../components';
+import { Card, MyCarsSkeleton, PrimaryButton, ScreenScroll } from '../../components';
 import type { AppStackParamList } from '../../types';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
@@ -12,7 +12,7 @@ import { getErrorMessage } from '../../lib/errors';
 export function MyCarsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [cars, setCars] = useState<CarRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,7 +65,9 @@ export function MyCarsScreen() {
         </Pressable>
       </View>
 
-      {cars.length ? (
+      {loading && cars.length === 0 ? (
+        <MyCarsSkeleton />
+      ) : cars.length ? (
         cars.map((car) => (
           <Card key={car.id} style={styles.carCard}>
             <View style={styles.carRow}>

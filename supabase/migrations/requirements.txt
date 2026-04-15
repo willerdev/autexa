@@ -5,3 +5,10 @@ supabase fees 45$
 google gemini for google calendar and reminders  40$
 server side hosting (admin management ) 100$ 
 domain  email subs name for email 24$ per month 
+
+
+
+
+
+
+@/Users/willer/.cursor/projects/Users-willer-Desktop-autexa/terminals/11.txt:290-294  1. i want that everything that mention to users that we are using any kind of payment integration be hidden to users 2. i want that the floating button when user scrolls it shrinks and when he stop it reset to to its normal size  3. i want the ai screen to have skelton loading too 4.registering business not working see why 5. prepare everything for production meaning remove all test data like business saved from supabase give me sql code to run and remove demo data 6. reduce the space between screen title and screen header title after that deploy to github and build a new apk to exp for me do this step by step

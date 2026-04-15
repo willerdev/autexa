@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -26,7 +27,7 @@ import { TypingIndicator } from './TypingIndicator';
 import { shouldForceToolChatForText, shouldRouteBookingTools } from '../utils/aiAssistantRouting';
 import { inferLocalChatWidgets } from '../utils/inferChatWidgets';
 
-type ChatActionKind = 'full_assistant' | 'notifications' | 'recent_bookings' | 'browse_home';
+type ChatActionKind = 'full_assistant' | 'notifications' | 'recent_bookings' | 'browse_home' | 'wallet';
 
 type ChatAction = {
   id: string;
@@ -82,6 +83,7 @@ const TAB_BAR_CLEARANCE = 76;
 export function FloatingQuickHub() {
   const { isAuthenticated } = useAuth();
   const navLeaf = useUiStore((s) => s.navFocusedLeafName);
+  const isScrolling = useUiStore((s) => s.isScrolling);
   const hideOnAiAssistant = navLeaf === 'AiAssistant';
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
@@ -121,6 +123,19 @@ export function FloatingQuickHub() {
   const bottomOffset = Math.max(insets.bottom, 8) + TAB_BAR_CLEARANCE;
   const rightOffset = spacing.lg;
 
+  const fabScale = useRef(new Animated.Value(1)).current;
+  const targetScale = useMemo(() => (isScrolling ? 0.78 : 1), [isScrolling]);
+
+  useEffect(() => {
+    Animated.spring(fabScale, {
+      toValue: targetScale,
+      stiffness: 420,
+      damping: 28,
+      mass: 0.7,
+      useNativeDriver: true,
+    }).start();
+  }, [fabScale, targetScale]);
+
   const openNotifications = () => {
     setExpanded(false);
     navigateToAppStack('Notifications', undefined);
@@ -130,6 +145,11 @@ export function FloatingQuickHub() {
   const openFullAssistant = () => {
     setExpanded(false);
     navigateToAppStack('AiAssistant', undefined);
+  };
+
+  const openWallet = () => {
+    setExpanded(false);
+    navigateToAppStack('Wallet', undefined);
   };
 
   const openAiModal = () => {
@@ -165,6 +185,9 @@ export function FloatingQuickHub() {
         break;
       case 'browse_home':
         navigateToAppStack('MainTabs', { screen: 'Home' });
+        break;
+      case 'wallet':
+        navigateToAppStack('Wallet', undefined);
         break;
       default:
         break;
@@ -329,6 +352,14 @@ export function FloatingQuickHub() {
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.menuBtn, pressed && styles.menuBtnPressed]}
+              onPress={openWallet}
+              accessibilityRole="button"
+              accessibilityLabel="Wallet"
+            >
+              <Ionicons name="wallet-outline" size={22} color={colors.primaryDark} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.menuBtn, pressed && styles.menuBtnPressed]}
               onPress={openFullAssistant}
               accessibilityRole="button"
               accessibilityLabel="Full assistant"
@@ -346,14 +377,16 @@ export function FloatingQuickHub() {
           </View>
         ) : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-          onPress={() => setExpanded((e) => !e)}
-          accessibilityRole="button"
-          accessibilityLabel={expanded ? 'Close quick menu' : 'Open quick menu'}
-        >
-          <Ionicons name={expanded ? 'close' : 'flash'} size={26} color="#fff" />
-        </Pressable>
+        <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+          <Pressable
+            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+            onPress={() => setExpanded((e) => !e)}
+            accessibilityRole="button"
+            accessibilityLabel={expanded ? 'Close quick menu' : 'Open quick menu'}
+          >
+            <Ionicons name={expanded ? 'close' : 'flash'} size={26} color="#fff" />
+          </Pressable>
+        </Animated.View>
       </View>
 
       <Modal visible={aiOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setAiOpen(false)}>

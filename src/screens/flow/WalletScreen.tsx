@@ -23,7 +23,7 @@ import {
   withdrawFromSavings,
   type WalletTransaction,
 } from '../../api/wallet';
-import { Card, PrimaryButton, ScreenScroll, TextField } from '../../components';
+import { Card, PrimaryButton, ScreenScroll, TextField, WalletHomeSkeleton } from '../../components';
 import { isAutexaApiConfigured } from '../../config/env';
 import { resolveWalletMomoProvider } from '../../lib/ugandaMomo';
 import { colors, radius, spacing } from '../../theme';
@@ -314,11 +314,7 @@ export function WalletScreen() {
         </Card>
       ) : null}
 
-      {loading && !wallet ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : null}
+      {loading && !wallet ? <WalletHomeSkeleton /> : null}
 
       {wallet ? (
         <>
@@ -480,7 +476,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   card: { marginBottom: spacing.md },
-  center: { paddingVertical: spacing.lg, alignItems: 'center' },
   errorText: { fontSize: 14, color: colors.danger, marginBottom: spacing.sm },
   retryBtn: { marginTop: spacing.xs },
   muted: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },

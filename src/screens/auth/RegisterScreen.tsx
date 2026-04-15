@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useRef, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, ScreenScroll, TextField } from '../../components';
@@ -16,6 +17,7 @@ export function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
   const submitLockRef = useRef(false);
 
@@ -42,6 +44,10 @@ export function RegisterScreen() {
     setLoading(true);
     try {
       await register(firstName.trim(), email.trim(), password, phone.trim() || undefined);
+      const rc = referralCode.trim();
+      if (rc) {
+        await AsyncStorage.setItem('autexa:pending_referral_code', rc);
+      }
       Alert.alert(
         'Check your inbox',
         'If email confirmation is enabled in Supabase, confirm your email before signing in.',
@@ -90,6 +96,12 @@ export function RegisterScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="password-new"
+        />
+        <TextField
+          label="Referral code (optional)"
+          value={referralCode}
+          onChangeText={setReferralCode}
+          autoCapitalize="characters"
         />
       </View>
 

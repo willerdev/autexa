@@ -4,24 +4,22 @@ import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookingsScreen } from '../screens/main/BookingsScreen';
 import { HomeScreen } from '../screens/main/HomeScreen';
-import { MapScreen } from '../screens/main/MapScreen';
+import { ExploreScreen } from '../screens/main/ExploreScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
 import { MyCarsScreen } from '../screens/flow/MyCarsScreen';
 import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
 import type { MainTabParamList } from '../types';
 import { colors } from '../theme';
 import { useUiStore } from '../stores/uiStore';
-import { WalletTabNavigator } from './WalletTabNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const iconFor: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
   Home: 'home-outline',
-  Map: 'map-outline',
+  Explore: 'compass-outline',
   Bookings: 'calendar-outline',
   MyCars: 'car-outline',
   ProviderServicesTab: 'briefcase-outline',
-  Wallet: 'wallet-outline',
   Profile: 'person-outline',
 };
 
@@ -50,7 +48,7 @@ export function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
+      <Tab.Screen name="Explore" component={ExploreScreen} options={{ title: 'Explore' }} />
       <Tab.Screen
         name="Bookings"
         component={BookingsScreen}
@@ -64,7 +62,6 @@ export function MainTabNavigator() {
       ) : (
         <Tab.Screen name="MyCars" component={MyCarsScreen} options={{ title: 'My cars' }} />
       )}
-      <Tab.Screen name="Wallet" component={WalletTabNavigator} options={{ title: 'Wallet' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

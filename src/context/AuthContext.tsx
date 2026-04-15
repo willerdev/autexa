@@ -1,6 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { fetchProfile } from '../api/profile';
+import { claimReferralCode, maybeCreditReferral } from '../api/referrals';
 import { isSupabaseConfigured } from '../config/env';
 import { getAuthActionErrorMessage } from '../lib/errors';
 import { supabase } from '../lib/supabase';
@@ -43,6 +45,25 @@ async function hydrateProfile(session: Session | null): Promise<void> {
     }
     useSessionStore.getState().setProfile(data ?? null);
     await useSessionStore.getState().refreshUserAiContext();
+
+    // Referral flow:
+    // - If the user entered a code at sign-up, claim it after first authenticated session.
+    // - Credit the referrer once (idempotent) when the referred user becomes active.
+    try {
+      const pending = (await AsyncStorage.getItem('autexa:pending_referral_code')) || '';
+      const code = pending.trim();
+      if (code) {
+        await claimReferralCode(code);
+        await AsyncStorage.removeItem('autexa:pending_referral_code');
+      }
+    } catch (e) {
+      if (__DEV__) console.warn('[Auth] referral claim skipped:', e instanceof Error ? e.message : e);
+    }
+    try {
+      await maybeCreditReferral();
+    } catch (e) {
+      if (__DEV__) console.warn('[Auth] referral credit skipped:', e instanceof Error ? e.message : e);
+    }
   } catch (e) {
     if (__DEV__) {
       console.warn('[Auth] hydrateProfile: unexpected error', e);

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '../theme';
+import { useUiStore } from '../stores/uiStore';
 
 type Props = {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ type Props = {
 
 export function ScreenScroll({ children, style, contentContainerStyle, edges }: Props) {
   const insets = useSafeAreaInsets();
+  const setIsScrolling = useUiStore((s) => s.setIsScrolling);
+  const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const edgesList = edges ?? ['left', 'right'];
   const usesTop = edgesList.includes('top');
   const usesBottom = edgesList.includes('bottom');
@@ -56,6 +59,22 @@ export function ScreenScroll({ children, style, contentContainerStyle, edges }: 
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={scrollContentResolved}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => {
+            if (endTimerRef.current) clearTimeout(endTimerRef.current);
+            setIsScrolling(true);
+          }}
+          onMomentumScrollBegin={() => {
+            if (endTimerRef.current) clearTimeout(endTimerRef.current);
+            setIsScrolling(true);
+          }}
+          onScrollEndDrag={() => {
+            if (endTimerRef.current) clearTimeout(endTimerRef.current);
+            endTimerRef.current = setTimeout(() => setIsScrolling(false), 200);
+          }}
+          onMomentumScrollEnd={() => {
+            if (endTimerRef.current) clearTimeout(endTimerRef.current);
+            endTimerRef.current = setTimeout(() => setIsScrolling(false), 120);
+          }}
         >
           {children}
         </ScrollView>

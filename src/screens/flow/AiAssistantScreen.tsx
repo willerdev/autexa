@@ -22,7 +22,7 @@ import {
   postUpdateBookingAutexa,
   type ChatBillPreviewPayload,
 } from '../../api/aiMarketplace';
-import { Card, ChatWidgetTray, Screen, TypingIndicator } from '../../components';
+import { AiAssistantSkeleton, Card, ChatWidgetTray, Screen, TypingIndicator } from '../../components';
 import type { BookingPaymentMethodChoice } from '../../components/ChatWidgetTray';
 import { isAutexaApiConfigured } from '../../config/env';
 import { getErrorMessage } from '../../lib/errors';
@@ -67,6 +67,8 @@ export function AiAssistantScreen({ navigation, route }: Props) {
   const messagesRef = useRef<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [actionPrompt, setActionPrompt] = useState<string | null>(null);
   const [providerOptions, setProviderOptions] = useState<
     { id: string; name: string; price_cents: number; rating: number; distance_km: number; availability: string; serviceName?: string }[]
@@ -587,6 +589,15 @@ export function AiAssistantScreen({ navigation, route }: Props) {
     })();
   }, [route.params?.seed, sendText]);
 
+  useEffect(() => {
+    // Prevent skeleton flash on fast devices.
+    if (initTimerRef.current) clearTimeout(initTimerRef.current);
+    initTimerRef.current = setTimeout(() => setInitializing(false), 220);
+    return () => {
+      if (initTimerRef.current) clearTimeout(initTimerRef.current);
+    };
+  }, []);
+
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <KeyboardAvoidingView
@@ -607,6 +618,11 @@ export function AiAssistantScreen({ navigation, route }: Props) {
           Try: “I need a mechanic” or “Cheapest car wash”. After you book in chat, you’ll see a text bill here — open the booking screen only when you choose to.
         </Text>
         <View style={styles.listWrap}>
+        {initializing && messages.length === 0 ? (
+          <View style={styles.skeletonPad}>
+            <AiAssistantSkeleton />
+          </View>
+        ) : (
         <FlatList
           ref={listRef}
           style={styles.listFlex}
@@ -790,6 +806,7 @@ export function AiAssistantScreen({ navigation, route }: Props) {
             </Card>
           )}
         />
+        )}
         </View>
         <ChatWidgetTray
           widgets={chatWidgets}
@@ -873,6 +890,9 @@ const styles = StyleSheet.create({
   listWrap: {
     flex: 1,
     minHeight: 0,
+  },
+  skeletonPad: {
+    paddingTop: spacing.sm,
   },
   listFlex: {
     flex: 1,

@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Card, PrimaryButton, ScreenScroll } from '../../components';
 import { useAuth } from '../../context/AuthContext';
+import { fetchMyReferralCode } from '../../api/referrals';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useUiStore } from '../../stores/uiStore';
 import type { MainTabParamList } from '../../types';
@@ -17,6 +19,43 @@ export function ProfileScreen() {
   const profile = useSessionStore((s) => s.profile);
   const appMode = useUiStore((s) => s.appMode);
   const isProvider = appMode === 'provider';
+  const [refCode, setRefCode] = useState<string>('');
+  const [refCodeError, setRefCodeError] = useState<string>('');
+
+  const loadRefCode = useCallback(async () => {
+    try {
+      setRefCodeError('');
+      const { code } = await fetchMyReferralCode();
+      setRefCode(String(code ?? '').trim());
+    } catch (e) {
+      setRefCode('');
+      setRefCodeError('Could not load your referral code. Tap refresh to retry.');
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      void (async () => {
+        if (!alive) return;
+        await loadRefCode();
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [loadRefCode]),
+  );
+
+  const shareReferral = async () => {
+    const code = refCode.trim();
+    if (!code) return;
+    const message = `Join Autexa with my referral code: ${code}`;
+    try {
+      await Share.share({ message });
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <ScreenScroll edges={['top', 'left', 'right']}>
@@ -35,84 +74,76 @@ export function ProfileScreen() {
         ) : null}
       </Card>
 
-      <Text style={styles.section}>Wallet & savings</Text>
+      <Text style={styles.section}>Places</Text>
       <Card>
-        <Pressable style={styles.settingRow} onPress={() => navigation.navigate('Wallet')}>
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'Map', undefined)}>
           <View style={styles.settingIcon}>
-            <Ionicons name="wallet-outline" size={22} color={colors.text} />
+            <Ionicons name="map-outline" size={22} color={colors.text} />
           </View>
-          <Text style={styles.settingLabel}>Wallet overview</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => navigateAppStack(navigation, 'WalletTransactions', undefined)}
-        >
-          <View style={styles.settingIcon}>
-            <Ionicons name="receipt-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Transaction history</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'WalletPayees', undefined)}>
-          <View style={styles.settingIcon}>
-            <Ionicons name="people-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Saved payees</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => navigateAppStack(navigation, 'WalletPaymentLinks', undefined)}
-        >
-          <View style={styles.settingIcon}>
-            <Ionicons name="link-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Payment links</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'WalletSavings', undefined)}>
-          <View style={styles.settingIcon}>
-            <Ionicons name="archive-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Savings</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => navigateAppStack(navigation, 'WalletTransfers', undefined)}
-        >
-          <View style={styles.settingIcon}>
-            <Ionicons name="swap-horizontal-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Transfers</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable
-          style={styles.settingRow}
-          onPress={() => navigateAppStack(navigation, 'SavingsChallenges', undefined)}
-        >
-          <View style={styles.settingIcon}>
-            <Ionicons name="trophy-outline" size={22} color={colors.text} />
-          </View>
-          <Text style={styles.settingLabel}>Savings challenges</Text>
+          <Text style={styles.settingLabel}>Map</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
       </Card>
 
+      <Text style={styles.section}>Referral</Text>
+      <Card>
+        <View style={styles.refRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingLabel}>Your referral code</Text>
+            <Text style={styles.refCode}>{refCode || '—'}</Text>
+            <Text style={styles.refHint}>Earn 500 UGX when a referred user becomes active.</Text>
+            {refCodeError ? <Text style={styles.refError}>{refCodeError}</Text> : null}
+          </View>
+          <Pressable style={styles.refAction} onPress={() => void loadRefCode()}>
+            <Ionicons name="refresh-outline" size={18} color={colors.primaryDark} />
+          </Pressable>
+          <Pressable
+            style={styles.refAction}
+            onPress={async () => {
+              if (!refCode.trim()) return;
+              await Clipboard.setStringAsync(refCode.trim());
+              Alert.alert('Copied', 'Referral code copied.');
+            }}
+          >
+            <Ionicons name="copy-outline" size={18} color={colors.primaryDark} />
+          </Pressable>
+          <Pressable style={styles.refAction} onPress={shareReferral} disabled={!refCode.trim()}>
+            <Ionicons name="share-social-outline" size={18} color={colors.primaryDark} />
+          </Pressable>
+        </View>
+      </Card>
+
       <Text style={styles.section}>Settings</Text>
       <Card>
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'EditProfile', undefined)}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="create-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Edit profile</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
         <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'MyCars', undefined)}>
           <View style={styles.settingIcon}>
             <Ionicons name="car-outline" size={22} color={colors.text} />
           </View>
           <Text style={styles.settingLabel}>My cars</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'Subscription', undefined)}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="ribbon-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Subscription</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable style={styles.settingRow} onPress={() => navigateAppStack(navigation, 'TwoFactorSettings', undefined)}>
+          <View style={styles.settingIcon}>
+            <Ionicons name="shield-checkmark-outline" size={22} color={colors.text} />
+          </View>
+          <Text style={styles.settingLabel}>Two‑factor authentication</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </Pressable>
         <View style={styles.divider} />
@@ -129,12 +160,7 @@ export function ProfileScreen() {
         <View style={styles.divider} />
         <Pressable
           style={styles.settingRow}
-          onPress={() =>
-            Alert.alert(
-              'Payments',
-              'Wallet and booking deposits use Flutterwave v4 (Uganda mobile money on your phone). Configure FLUTTERWAVE_CLIENT_ID, FLUTTERWAVE_CLIENT_SECRET, and FLUTTERWAVE_SANDBOX in server/.env.',
-            )
-          }
+          onPress={() => Alert.alert('Payments', 'Payment methods are configured automatically.')}
         >
           <View style={styles.settingIcon}>
             <Ionicons name="card-outline" size={22} color={colors.text} />
@@ -260,6 +286,41 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: colors.primaryMuted,
+  },
+  refRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  refCode: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: colors.text,
+  },
+  refHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  refError: {
+    marginTop: 6,
+    fontSize: 12,
+    color: colors.danger,
+    lineHeight: 16,
+    fontWeight: '800',
+  },
+  refAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(23,94,163,0.2)',
   },
   roleText: {
     fontSize: 13,

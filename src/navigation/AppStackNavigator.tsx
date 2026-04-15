@@ -15,7 +15,13 @@ import { ProviderCategoriesScreen } from '../screens/provider/ProviderCategories
 import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScreen';
 import { ProviderServiceEditScreen } from '../screens/provider/ProviderServiceEditScreen';
 import { ProviderBookingsScreen } from '../screens/provider/ProviderBookingsScreen';
+import { ProviderAddBusinessScreen } from '../screens/provider/ProviderAddBusinessScreen';
 import { BusinessDetailScreen } from '../screens/flow/BusinessDetailScreen';
+import { MapScreen } from '../screens/main/MapScreen';
+import { EditProfileScreen } from '../screens/flow/EditProfileScreen';
+import { TwoFactorSettingsScreen } from '../screens/flow/TwoFactorSettingsScreen';
+import { SubscriptionScreen } from '../screens/flow/SubscriptionScreen';
+import { AddUnclaimedBusinessWizard } from '../screens/flow/AddUnclaimedBusinessWizard';
 import { WalletScreen } from '../screens/flow/WalletScreen';
 import { WalletPayeesScreen } from '../screens/flow/WalletPayeesScreen';
 import { WalletPaymentLinksScreen } from '../screens/flow/WalletPaymentLinksScreen';
@@ -81,7 +87,13 @@ export function AppStackNavigator() {
       <Stack.Screen name="ProviderServices" component={ProviderServicesScreen} options={{ title: 'Services' }} />
       <Stack.Screen name="ProviderServiceEdit" component={ProviderServiceEditScreen} options={{ title: 'Edit service' }} />
       <Stack.Screen name="ProviderBookings" component={ProviderBookingsScreen} options={{ title: 'Bookings' }} />
+      <Stack.Screen name="ProviderAddBusiness" component={ProviderAddBusinessScreen} options={{ title: 'Add business' }} />
+      <Stack.Screen name="AddUnclaimedBusiness" component={AddUnclaimedBusinessWizard} options={{ title: 'Add business' }} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} options={{ title: 'Business' }} />
+      <Stack.Screen name="Map" component={MapScreen} options={{ title: 'Map' }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit profile' }} />
+      <Stack.Screen name="TwoFactorSettings" component={TwoFactorSettingsScreen} options={{ title: 'Two‑factor' }} />
+      <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ title: 'Subscription' }} />
       <Stack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
       <Stack.Screen name="WalletTransactions" component={WalletTransactionsScreen} options={{ title: 'Transactions' }} />
       <Stack.Screen name="WalletPayees" component={WalletPayeesScreen} options={{ title: 'Saved payees' }} />

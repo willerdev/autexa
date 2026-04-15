@@ -15,3 +15,12 @@ export { ScanningOverlay } from './ScanningOverlay';
 export { FloatingQuickHub } from './FloatingQuickHub';
 export { TypingIndicator } from './TypingIndicator';
 export { ChatWidgetTray } from './ChatWidgetTray';
+export {
+  SkeletonBlock,
+  BrowseHomeSkeleton,
+  WalletHomeSkeleton,
+  BookingsListSkeleton,
+  MyCarsSkeleton,
+  ProviderDashboardSkeleton,
+  AiAssistantSkeleton,
+} from './Skeleton';

@@ -1,9 +1,9 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { BookingRow } from '../../api/bookings';
 import { listMyBookings } from '../../api/bookings';
-import { Card, PrimaryButton, ScreenScroll, SectionHeader } from '../../components';
+import { BookingsListSkeleton, Card, PrimaryButton, ScreenScroll, SectionHeader } from '../../components';
 import type { Booking, MainTabParamList } from '../../types';
 import { navigateAppStack } from '../../utils/navigation';
 import { colors, radius, spacing } from '../../theme';
@@ -64,7 +64,7 @@ export function BookingsScreen() {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <BookingsListSkeleton />
       ) : (
         <FlatList
           data={bookings}
@@ -164,8 +164,5 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     marginBottom: spacing.sm,
-  },
-  loader: {
-    marginVertical: spacing.lg,
   },
 });

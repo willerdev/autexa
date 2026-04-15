@@ -5,6 +5,9 @@ type UiState = {
   /** Deepest active route (e.g. `AiAssistant`) — for global UI like the floating hub. */
   navFocusedLeafName: string | undefined;
   setNavFocusedLeafName: (name: string | undefined) => void;
+  /** True while the user is actively scrolling (used for shrinking the floating hub). */
+  isScrolling: boolean;
+  setIsScrolling: (isScrolling: boolean) => void;
   globalMessage: string | null;
   setGlobalMessage: (message: string | null) => void;
   homeMode: 'ai' | 'manual';
@@ -17,6 +20,8 @@ type UiState = {
 export const useUiStore = create<UiState>((set) => ({
   navFocusedLeafName: undefined,
   setNavFocusedLeafName: (navFocusedLeafName) => set({ navFocusedLeafName }),
+  isScrolling: false,
+  setIsScrolling: (isScrolling) => set({ isScrolling }),
   globalMessage: null,
   setGlobalMessage: (globalMessage) => set({ globalMessage }),
   homeMode: 'ai',
