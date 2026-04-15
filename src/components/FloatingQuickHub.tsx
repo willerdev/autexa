@@ -85,6 +85,7 @@ export function FloatingQuickHub() {
   const navLeaf = useUiStore((s) => s.navFocusedLeafName);
   const isScrolling = useUiStore((s) => s.isScrolling);
   const hideOnAiAssistant = navLeaf === 'AiAssistant';
+  const hideOnBusinessDetail = navLeaf === 'BusinessDetail';
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -323,7 +324,7 @@ export function FloatingQuickHub() {
     [sendUserMessage],
   );
 
-  if (!isAuthenticated || hideOnAiAssistant) return null;
+  if (!isAuthenticated || hideOnAiAssistant || hideOnBusinessDetail) return null;
 
   return (
     <>

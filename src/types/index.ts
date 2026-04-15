@@ -33,6 +33,10 @@ export type Provider = {
   phone?: string;
   /** Human-readable e.g. \"Mon–Sat 9am–6pm\". */
   workingDays?: string;
+  /** Public listing avatar image. */
+  imageUrl?: string | null;
+  /** Optional gallery urls for detail screen. */
+  galleryUrls?: string[] | null;
   aiRecommended?: boolean;
   aiReason?: string;
 };

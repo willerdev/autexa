@@ -1,6 +1,6 @@
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   BrowseHomeSkeleton,
   HomeSearchModal,
@@ -217,9 +217,13 @@ export function ClientManualBrowseHome({
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.cardTop}>
-                <View style={[styles.avatar, { backgroundColor: tintForId(item.id) }]}>
-                  <Ionicons name="person-outline" size={26} color="rgba(24,24,27,0.25)" />
-                </View>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.avatarImg} />
+                ) : (
+                  <View style={[styles.avatar, { backgroundColor: tintForId(item.id) }]}>
+                    <Ionicons name="person-outline" size={26} color="rgba(24,24,27,0.25)" />
+                  </View>
+                )}
                 <View style={styles.cardMain}>
                   <View style={styles.titleRow}>
                     <Text style={styles.cardTitle} numberOfLines={1}>
@@ -397,6 +401,12 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarImg: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.border,
   },
   cardMain: {
     flex: 1,

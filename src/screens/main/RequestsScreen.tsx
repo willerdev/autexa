@@ -1,9 +1,9 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequestRow } from '../../api/serviceRequests';
 import { listMyServiceRequests } from '../../api/serviceRequests';
-import { Card, PrimaryButton, ScreenScroll, SectionHeader } from '../../components';
+import { Card, PrimaryButton, RequestsSkeleton, ScreenScroll, SectionHeader } from '../../components';
 import type { MainTabParamList } from '../../types';
 import { navigateAppStack } from '../../utils/navigation';
 import { formatRelativeShort } from '../../utils/dateFormat';
@@ -53,7 +53,7 @@ export function RequestsScreen() {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <RequestsSkeleton />
       ) : (
         <FlatList
           data={rows}
@@ -101,8 +101,5 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     marginBottom: spacing.sm,
-  },
-  loader: {
-    marginVertical: spacing.lg,
   },
 });

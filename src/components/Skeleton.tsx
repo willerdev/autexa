@@ -154,6 +154,75 @@ export function ProviderDashboardSkeleton() {
   );
 }
 
+export function RequestsSkeleton() {
+  return (
+    <View accessibilityLabel="Loading requests" style={{ gap: spacing.md, paddingTop: spacing.sm }}>
+      {[1, 2, 3].map((i) => (
+        <View
+          key={i}
+          style={{
+            borderRadius: radius.lg,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: spacing.md,
+          }}
+        >
+          <SkeletonBlock width="62%" height={16} borderRadius={6} />
+          <SkeletonBlock width="38%" height={12} borderRadius={6} style={{ marginTop: 10 }} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function BusinessDetailSkeleton() {
+  return (
+    <View accessibilityLabel="Loading business" style={{ gap: spacing.md, paddingTop: spacing.sm }}>
+      <SkeletonBlock width="100%" height={190} borderRadius={0} style={{ marginHorizontal: -spacing.lg }} />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        {[1, 2, 3, 4].map((i) => (
+          <SkeletonBlock key={i} width={92} height={64} borderRadius={radius.lg} />
+        ))}
+      </View>
+      <View
+        style={{
+          borderRadius: radius.xl,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+          padding: spacing.md,
+          gap: spacing.sm,
+        }}
+      >
+        <SkeletonBlock width="52%" height={18} borderRadius={6} />
+        <SkeletonBlock width="68%" height={12} borderRadius={6} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 2 }}>
+        <SkeletonBlock width={90} height={14} borderRadius={6} />
+        <SkeletonBlock width={90} height={14} borderRadius={6} />
+      </View>
+      <View style={{ gap: spacing.md, marginTop: 4 }}>
+        {[1, 2].map((i) => (
+          <View
+            key={i}
+            style={{
+              borderRadius: radius.lg,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: spacing.md,
+            }}
+          >
+            <SkeletonBlock width="62%" height={16} borderRadius={6} />
+            <SkeletonBlock width="42%" height={12} borderRadius={6} style={{ marginTop: 10 }} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export function AiAssistantSkeleton() {
   return (
     <View style={styles.aiRoot} accessibilityLabel="Loading assistant">

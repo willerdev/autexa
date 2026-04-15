@@ -1,10 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useMemo, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, PrimaryButton, ScreenScroll, TextField } from '../../components';
-import { uploadProviderListingImage } from '../../api/serviceImages';
+import { uploadProviderListingImageFromBase64 } from '../../api/serviceImages';
 import { supabase } from '../../lib/supabase';
 import type { AppStackParamList } from '../../types';
 import { colors, radius, spacing } from '../../theme';
@@ -16,6 +16,10 @@ export function AddUnclaimedBusinessWizard() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<'idle' | 'creating' | 'uploading' | 'saving'>('idle');
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+  const [dotTick, setDotTick] = useState(0);
+  const dotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Step 1 (required basics)
   const [name, setName] = useState('');
@@ -30,7 +34,7 @@ export function AddUnclaimedBusinessWizard() {
   const [lng, setLng] = useState('');
 
   // Step 2 photos
-  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<Array<{ uri: string; base64: string }>>([]);
 
   const canNextStep1 = useMemo(() => {
     return Boolean(name.trim() && phone.trim() && location.trim() && serviceType.trim());
@@ -47,17 +51,21 @@ export function AddUnclaimedBusinessWizard() {
       allowsMultipleSelection: true,
       quality: 0.9,
       selectionLimit: 6,
+      base64: true,
     });
     if (res.canceled) return;
-    const picked = res.assets.map((a) => a.uri).filter(Boolean);
-    setPhotoUris((prev) => {
+    const picked = res.assets
+      .filter((a) => Boolean(a.uri) && Boolean(a.base64))
+      .map((a) => ({ uri: a.uri, base64: String(a.base64) }));
+    setPhotos((prev) => {
       const next = [...prev, ...picked];
-      // Dedup
-      return Array.from(new Set(next)).slice(0, 6);
+      const byUri = new Map<string, { uri: string; base64: string }>();
+      for (const p of next) byUri.set(p.uri, p);
+      return Array.from(byUri.values()).slice(0, 6);
     });
   };
 
-  const removePhoto = (uri: string) => setPhotoUris((prev) => prev.filter((x) => x !== uri));
+  const removePhoto = (uri: string) => setPhotos((prev) => prev.filter((x) => x.uri !== uri));
 
   const submit = async () => {
     const nm = name.trim();
@@ -83,6 +91,8 @@ export function AddUnclaimedBusinessWizard() {
 
     try {
       setBusy(true);
+      setUploadPhase('creating');
+      setUploadProgress({ done: 0, total: photos.length });
 
       // 1) Insert listing (unclaimed)
       const { data: inserted, error: insErr } = await supabase
@@ -111,19 +121,28 @@ export function AddUnclaimedBusinessWizard() {
       // 2) Upload photos (best-effort) and patch provider row.
       // If storage/network is unavailable, keep the listing and let the user add photos later.
       let photoWarning: string | null = null;
-      if (photoUris.length) {
+      if (photos.length) {
+        setUploadPhase('uploading');
         const urls: string[] = [];
-        for (const uri of photoUris) {
+        for (const p of photos) {
           try {
-            const { url, error } = await uploadProviderListingImage(providerId, uri);
+            // Use the unrestricted test bucket first to validate the client pipeline.
+            const { url, error } = await uploadProviderListingImageFromBase64({
+              providerId,
+              base64: p.base64,
+              sourceUri: p.uri,
+              bucket: 'pictures',
+            });
             if (error) throw error;
             if (url) urls.push(url);
+            setUploadProgress((prev) => ({ ...prev, done: Math.min(prev.total, prev.done + 1) }));
           } catch (e) {
             photoWarning = e instanceof Error ? e.message : 'Could not upload one or more photos.';
             break;
           }
         }
         if (urls.length) {
+          setUploadPhase('saving');
           const imageUrl = urls[0] || null;
           const { error: upErr } = await supabase
             .from('providers')
@@ -135,9 +154,11 @@ export function AddUnclaimedBusinessWizard() {
         }
       }
 
+      setUploadPhase('idle');
       Alert.alert('Posted', photoWarning ? `Business listing created. Photos were not saved: ${photoWarning}` : 'Business listing created.');
       navigation.goBack();
     } catch (e) {
+      setUploadPhase('idle');
       const msg = getErrorMessage(e);
       const hint =
         /network request failed/i.test(msg)
@@ -149,10 +170,43 @@ export function AddUnclaimedBusinessWizard() {
     }
   };
 
+  useEffect(() => {
+    if (uploadPhase === 'idle') {
+      if (dotTimerRef.current) clearInterval(dotTimerRef.current);
+      dotTimerRef.current = null;
+      setDotTick(0);
+      return;
+    }
+    if (dotTimerRef.current) clearInterval(dotTimerRef.current);
+    dotTimerRef.current = setInterval(() => setDotTick((t) => (t + 1) % 4), 320);
+    return () => {
+      if (dotTimerRef.current) clearInterval(dotTimerRef.current);
+      dotTimerRef.current = null;
+    };
+  }, [uploadPhase]);
+
+  const dots = '.'.repeat(dotTick);
+
   return (
     <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
       <Text style={styles.title}>Add business</Text>
       <Text style={styles.sub}>Step {step} of 3</Text>
+
+      {uploadPhase !== 'idle' ? (
+        <View style={styles.overlay} pointerEvents="auto">
+          <View style={styles.overlayCard}>
+            <ActivityIndicator />
+            <Text style={styles.overlayTitle}>
+              {uploadPhase === 'creating'
+                ? `Creating listing${dots}`
+                : uploadPhase === 'uploading'
+                  ? `Uploading photos ${uploadProgress.done}/${uploadProgress.total}${dots}`
+                  : `Saving photos${dots}`}
+            </Text>
+            <Text style={styles.overlayHint}>Please wait — this can take a few seconds.</Text>
+          </View>
+        </View>
+      ) : null}
 
       {step === 1 ? (
         <Card style={styles.card}>
@@ -194,11 +248,11 @@ export function AddUnclaimedBusinessWizard() {
             <Text style={styles.blockTitle}>Business photos</Text>
             <Text style={styles.hint}>Add up to 6 photos (optional but recommended).</Text>
             <PrimaryButton title="Pick photos" onPress={() => void pickPhotos()} />
-            {photoUris.length ? (
+            {photos.length ? (
               <View style={styles.photoGrid}>
-                {photoUris.map((uri) => (
-                  <Pressable key={uri} onPress={() => removePhoto(uri)} style={styles.photoCell}>
-                    <Image source={{ uri }} style={styles.photo} />
+                {photos.map((p) => (
+                  <Pressable key={p.uri} onPress={() => removePhoto(p.uri)} style={styles.photoCell}>
+                    <Image source={{ uri: p.uri }} style={styles.photo} />
                     <View style={styles.photoX}>
                       <Text style={styles.photoXText}>×</Text>
                     </View>
@@ -266,6 +320,30 @@ const styles = StyleSheet.create({
   photoXText: { color: '#fff', fontWeight: '900', fontSize: 16, marginTop: -2 },
   footerRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   footerBtn: { flex: 1 },
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    zIndex: 50,
+  },
+  overlayCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  overlayTitle: { fontSize: 15, fontWeight: '900', color: colors.text },
+  overlayHint: { fontSize: 12, color: colors.textSecondary, lineHeight: 16 },
   reviewLine: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
   latLngRow: { flexDirection: 'row', gap: spacing.md },
   flex: { flex: 1 },

@@ -22,6 +22,11 @@ do $$
 declare
   t text;
   tables text[] := array[
+    -- Base catalog / admin (often explains "old" AI behavior)
+    'services',
+    'marketplace_categories',
+    'admin_settings',
+
     -- Marketplace / providers
     'provider_products',
     'provider_service_reviews',

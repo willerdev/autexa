@@ -1,11 +1,13 @@
 import React, { useMemo, useRef } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
   type StyleProp,
+  type ScrollViewProps,
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,9 +19,22 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
+  onScroll?: ScrollViewProps['onScroll'];
+  scrollEventThrottle?: number;
+  animated?: boolean;
+  floatingChildren?: React.ReactNode;
 };
 
-export function ScreenScroll({ children, style, contentContainerStyle, edges }: Props) {
+export function ScreenScroll({
+  children,
+  style,
+  contentContainerStyle,
+  edges,
+  onScroll,
+  scrollEventThrottle,
+  animated,
+  floatingChildren,
+}: Props) {
   const insets = useSafeAreaInsets();
   const setIsScrolling = useUiStore((s) => s.setIsScrolling);
   const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,11 +69,41 @@ export function ScreenScroll({ children, style, contentContainerStyle, edges }: 
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {animated ? (
+          <Animated.ScrollView
+            style={styles.flex}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={scrollContentResolved}
+            showsVerticalScrollIndicator={false}
+            onScroll={onScroll}
+            scrollEventThrottle={scrollEventThrottle ?? 16}
+            onScrollBeginDrag={() => {
+              if (endTimerRef.current) clearTimeout(endTimerRef.current);
+              setIsScrolling(true);
+            }}
+            onMomentumScrollBegin={() => {
+              if (endTimerRef.current) clearTimeout(endTimerRef.current);
+              setIsScrolling(true);
+            }}
+            onScrollEndDrag={() => {
+              if (endTimerRef.current) clearTimeout(endTimerRef.current);
+              endTimerRef.current = setTimeout(() => setIsScrolling(false), 200);
+            }}
+            onMomentumScrollEnd={() => {
+              if (endTimerRef.current) clearTimeout(endTimerRef.current);
+              endTimerRef.current = setTimeout(() => setIsScrolling(false), 120);
+            }}
+          >
+            {children}
+          </Animated.ScrollView>
+        ) : (
         <ScrollView
           style={styles.flex}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={scrollContentResolved}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
           onScrollBeginDrag={() => {
             if (endTimerRef.current) clearTimeout(endTimerRef.current);
             setIsScrolling(true);
@@ -78,7 +123,9 @@ export function ScreenScroll({ children, style, contentContainerStyle, edges }: 
         >
           {children}
         </ScrollView>
+        )}
       </KeyboardAvoidingView>
+      {floatingChildren}
     </SafeAreaView>
   );
 }

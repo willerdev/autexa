@@ -14,6 +14,8 @@ export type ProviderRow = {
   is_product_business?: boolean;
   phone?: string | null;
   working_days?: string | null;
+  image_url?: string | null;
+  gallery_urls?: string[] | null;
 };
 
 function parseDistanceKm(location: string): number {
@@ -34,7 +36,7 @@ export function mapProviderRow(row: ProviderRow): Provider {
     rating: r,
     reviewCount: Math.max(12, Math.round(r * 28)),
     distanceKm: parseDistanceKm(row.location),
-    priceEstimate: cents != null ? `from $${(cents / 100).toFixed(0)}` : 'Quote',
+    priceEstimate: cents != null ? `from UGX ${Math.round(cents / 100).toLocaleString()}` : 'Quote',
     specialty: row.service_type,
     location: row.location,
     basePriceCents: cents,
@@ -43,13 +45,17 @@ export function mapProviderRow(row: ProviderRow): Provider {
     isProductBusiness: Boolean(row.is_product_business),
     phone: typeof row.phone === 'string' ? row.phone : '',
     workingDays: typeof row.working_days === 'string' ? row.working_days : '',
+    imageUrl: typeof row.image_url === 'string' ? row.image_url : null,
+    galleryUrls: Array.isArray(row.gallery_urls) ? row.gallery_urls : null,
   };
 }
 
 export async function listAvailableProviders(): Promise<{ data: Provider[]; error: Error | null }> {
   const { data, error } = await supabase
     .from('providers')
-    .select('id,name,service_type,rating,location,is_available,base_price_cents,lat,lng,is_product_business,phone,working_days')
+    .select(
+      'id,name,service_type,rating,location,is_available,base_price_cents,lat,lng,is_product_business,phone,working_days,image_url,gallery_urls',
+    )
     .eq('is_available', true)
     .order('rating', { ascending: false });
   if (error) return { data: [], error: new Error(error.message) };

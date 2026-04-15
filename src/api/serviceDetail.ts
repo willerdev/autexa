@@ -12,6 +12,12 @@ export type PublicProviderDetail = {
   working_days?: string;
   lat?: number | null;
   lng?: number | null;
+  image_url?: string | null;
+  gallery_urls?: string[] | null;
+  created_by_user_id?: string | null;
+  claim_status?: string;
+  delivery_mode?: 'pickup' | 'delivery' | 'both';
+  delivery_area?: string;
 };
 
 export type PublicServiceDetail = {
@@ -71,13 +77,16 @@ export async function fetchPublicProvider(providerId: string): Promise<{
 }> {
   const { data, error } = await supabase
     .from('providers')
-    .select('id,name,service_type,rating,location,base_price_cents,is_product_business,phone,working_days,lat,lng')
+    .select(
+      'id,name,service_type,rating,location,base_price_cents,is_product_business,phone,working_days,lat,lng,image_url,gallery_urls,created_by_user_id,claim_status,delivery_mode,delivery_area',
+    )
     .eq('id', providerId)
     .maybeSingle();
 
   if (error) return { data: null, error: new Error(error.message) };
   if (!data) return { data: null, error: null };
   const row = data as Record<string, unknown>;
+  const g = row.gallery_urls;
   return {
     data: {
       id: row.id as string,
@@ -91,6 +100,12 @@ export async function fetchPublicProvider(providerId: string): Promise<{
       working_days: typeof row.working_days === 'string' ? row.working_days : '',
       lat: typeof row.lat === 'number' ? (row.lat as number) : null,
       lng: typeof row.lng === 'number' ? (row.lng as number) : null,
+      image_url: (row.image_url as string | null) ?? null,
+      gallery_urls: Array.isArray(g) ? (g as string[]) : [],
+      created_by_user_id: (row.created_by_user_id as string | null) ?? null,
+      claim_status: (row.claim_status as string | undefined) ?? 'unclaimed',
+      delivery_mode: ((row.delivery_mode as string | null) ?? 'pickup') as 'pickup' | 'delivery' | 'both',
+      delivery_area: (row.delivery_area as string | null) ?? '',
     },
     error: null,
   };
