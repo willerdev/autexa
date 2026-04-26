@@ -30,7 +30,7 @@ export function ProviderCard({ provider, onPress, selected }: Props) {
               {provider.aiRecommended ? (
                 <View style={styles.aiBadge}>
                   <Ionicons name="sparkles" size={12} color={colors.primaryDark} />
-                  <Text style={styles.aiBadgeText}>Autexa pick</Text>
+                  <Text style={styles.aiBadgeText}>Gearup pick</Text>
                 </View>
               ) : null}
             </View>

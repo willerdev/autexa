@@ -90,7 +90,7 @@ walletRouter.post('/topup/card', async (req, res) => {
           price_data: {
             currency: 'ugx',
             unit_amount: Math.round(amt),
-            product_data: { name: 'Autexa wallet top-up' },
+            product_data: { name: 'Gearup wallet top-up' },
           },
         },
       ],

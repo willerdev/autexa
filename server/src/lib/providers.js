@@ -75,7 +75,7 @@ Rules:
 
   const system =
     systemHint ||
-    'You are Autexa, a car-service marketplace assistant. Output strict JSON only, no prose outside JSON.';
+    'You are Gearup, a car-service marketplace assistant. Output strict JSON only, no prose outside JSON.';
 
   let text;
   try {

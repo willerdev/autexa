@@ -65,11 +65,11 @@ function AppHooks() {
         });
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('default', {
-            name: 'Autexa',
+            name: 'Gearup',
             importance: Notifications.AndroidImportance.DEFAULT,
           });
           await Notifications.setNotificationChannelAsync('autexa-quick', {
-            name: 'Autexa alerts',
+            name: 'Gearup alerts',
             importance: Notifications.AndroidImportance.HIGH,
             vibrationPattern: [0, 250, 250, 250],
             sound: 'default',

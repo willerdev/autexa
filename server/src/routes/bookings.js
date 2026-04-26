@@ -52,7 +52,7 @@ bookingsRouter.post('/auto-select', async (req, res) => {
     const provider = providers.find((p) => p.id === providerId);
     await notifyProviderInAppAndSms(sb, {
       providerId,
-      title: 'New Autexa booking (auto)',
+      title: 'New Gearup booking (auto)',
       body: `Booking ${booking.id} · ${serviceName ?? 'Service'} · ${date} ${time}`,
     });
 

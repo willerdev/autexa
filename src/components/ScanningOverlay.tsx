@@ -58,7 +58,7 @@ export function ScanningOverlay({ visible, imageUri, title, subtitle }: Props) {
           <View style={styles.gloss} />
         </View>
         <Text style={styles.title}>{title ?? 'Scanning…'}</Text>
-        <Text style={styles.subtitle}>{subtitle ?? 'Autexa is analyzing your photo'}</Text>
+        <Text style={styles.subtitle}>{subtitle ?? 'Gearup is analyzing your photo'}</Text>
       </View>
     </View>
   );

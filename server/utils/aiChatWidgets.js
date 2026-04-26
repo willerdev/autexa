@@ -6,12 +6,12 @@ import { SchemaType } from '@google/generative-ai';
  */
 export const EMIT_CHAT_WIDGETS_TOOL = {
   name: 'emit_chat_widgets',
-  description: `Shows native controls in the Autexa app so the user can pick values without typing. Call in the same model turn when you ask for that input.
+  description: `Shows native controls in the Gearup app so the user can pick values without typing. Call in the same model turn when you ask for that input.
 • date_picker — calendar date (booking date, etc.)
 • time_picker — time of day
 • photo_capture — camera or library for vehicle photos, damage, warning lights, engine bay
 • audio_record — short recording for sounds (engine misfire, knock, exhaust, squeal); user holds phone near the source
-• payment_method_picker — tap buttons: Autexa wallet, Card (Stripe), Cash/pay later, Mobile money (use when asking how they want to pay)
+• payment_method_picker — tap buttons: Gearup wallet, Card (Stripe), Cash/pay later, Mobile money (use when asking how they want to pay)
 • map_focus — open the Map focused on a provider pin or coordinates (use when user asks “show me where this business is”)
 After the user uses a control, their choice is sent back as text (or analysis) — you do not need to ask them to type the same thing again.`,
   parameters: {

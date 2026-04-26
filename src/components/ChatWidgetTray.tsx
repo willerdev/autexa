@@ -285,7 +285,7 @@ export function ChatWidgetTray({
             <View style={styles.payGrid}>
               {(
                 [
-                  { m: 'wallet' as const, icon: 'wallet-outline' as const, t: 'Autexa wallet' },
+                  { m: 'wallet' as const, icon: 'wallet-outline' as const, t: 'Gearup wallet' },
                   { m: 'card' as const, icon: 'phone-portrait-outline' as const, t: 'MM deposit (Flutterwave)' },
                   { m: 'pay_later' as const, icon: 'receipt-outline' as const, t: 'Cash / pay later' },
                   { m: 'mobile_money' as const, icon: 'phone-portrait-outline' as const, t: 'Mobile money' },

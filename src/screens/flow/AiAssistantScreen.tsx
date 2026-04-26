@@ -43,7 +43,7 @@ type Msg = {
   };
 };
 
-/** Text receipt only — no generated bill images in Ask Autexa. */
+/** Text receipt only — no generated bill images in Ask Gearup. */
 function billBlockFromPayload(billPreview: ChatBillPreviewPayload | null | undefined): Msg['billPreview'] | undefined {
   if (!billPreview?.textReceipt?.lines?.length) return undefined;
   return { textReceipt: billPreview.textReceipt };
@@ -168,7 +168,7 @@ export function AiAssistantScreen({ navigation, route }: Props) {
 
   function parsePayment(text: string): 'card' | 'mobile_money' | 'pay_later' | 'wallet' | null {
     const t = text.trim().toLowerCase();
-    if (t.includes('wallet') || t.includes('autexa balance') || t.includes('in-app balance')) return 'wallet';
+    if (t.includes('wallet') || t.includes('gearup balance') || t.includes('autexa balance') || t.includes('in-app balance')) return 'wallet';
     if (t.includes('later') || t.includes('not now') || t.includes('pay later') || /\bcash\b/.test(t)) return 'pay_later';
     if (t.includes('mobile') || t.includes('momo') || t.includes('mpesa') || t.includes('airtel money')) return 'mobile_money';
     if (t.includes('card') || t.includes('stripe') || t.includes('credit') || t.includes('debit')) return 'card';
@@ -553,7 +553,7 @@ export function AiAssistantScreen({ navigation, route }: Props) {
     (method: BookingPaymentMethodChoice) => {
       setChatWidgets([]);
       const labels: Record<BookingPaymentMethodChoice, string> = {
-        wallet: 'Autexa wallet',
+        wallet: 'Gearup wallet',
         card: 'Mobile money (Flutterwave v4)',
         pay_later: 'Cash / pay later',
         mobile_money: 'Mobile money',
@@ -609,7 +609,7 @@ export function AiAssistantScreen({ navigation, route }: Props) {
           <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.headerSide}>
             <Text style={styles.back}>‹ Back</Text>
           </Pressable>
-          <Text style={styles.title}>Ask Autexa</Text>
+          <Text style={styles.title}>Ask Gearup</Text>
           <Pressable onPress={() => void clearServerChat()} hitSlop={12} style={styles.headerSide}>
             <Text style={styles.clear}>Clear</Text>
           </Pressable>
@@ -819,7 +819,7 @@ export function AiAssistantScreen({ navigation, route }: Props) {
         <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, spacing.sm) + 34 }]}>
           <TextInput
             style={styles.input}
-            placeholder="Ask Autexa…"
+            placeholder="Ask Gearup…"
             placeholderTextColor={colors.textMuted}
             value={input}
             onChangeText={setInput}

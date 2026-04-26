@@ -210,7 +210,7 @@ export function FloatingQuickHub() {
             {
               id: `e-${Date.now()}`,
               role: 'assistant',
-              content: 'Connect the Autexa API (EXPO_PUBLIC_AUTEXA_API_URL) to use chat here.',
+              content: 'Connect the app API (EXPO_PUBLIC_AUTEXA_API_URL) to use chat here.',
             },
           ]);
           return;

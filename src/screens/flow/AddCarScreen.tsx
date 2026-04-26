@@ -122,7 +122,7 @@ export function AddCarScreen({ navigation, route }: Props) {
       {step === 'choose' ? (
         <Card>
           <Text style={styles.pickTitle}>How do you want to add your car?</Text>
-          <Text style={styles.pickSub}>You can fill in details manually, or take a photo and let Autexa detect them.</Text>
+          <Text style={styles.pickSub}>You can fill in details manually, or take a photo and let Gearup detect them.</Text>
           <View style={styles.pickRow}>
             <Pressable onPress={startManual} style={styles.pickTile}>
               <Text style={styles.pickTileTitle}>Fill details</Text>
@@ -169,7 +169,7 @@ export function AddCarScreen({ navigation, route }: Props) {
         visible={scanning}
         imageUri={scanUri}
         title="Scanning your car…"
-        subtitle="Autexa is recognizing make, model, year, and plate"
+        subtitle="Gearup is recognizing make, model, year, and plate"
       />
     </ScreenScroll>
   );

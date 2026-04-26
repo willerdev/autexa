@@ -68,7 +68,7 @@ export function RegisterScreen() {
           source={require('../../../assets/images/icon.png')}
           style={styles.brandIcon}
         />
-        <Text style={styles.wordmark}>AUTEXA</Text>
+        <Text style={styles.wordmark}>GEARUP</Text>
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>Book trusted car services in minutes.</Text>
       </View>

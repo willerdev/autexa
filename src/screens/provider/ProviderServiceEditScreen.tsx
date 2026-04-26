@@ -361,7 +361,7 @@ export function ProviderServiceEditScreen({ navigation, route }: Props) {
         <PrimaryButton title="Delete service" variant="outline" onPress={() => void remove()} disabled={busy} style={styles.deleteBtn} />
       ) : null}
 
-      <ScanningOverlay visible={scanning} imageUri={imageUri} title="Scanning your photo…" subtitle="Autexa is generating a service description" />
+      <ScanningOverlay visible={scanning} imageUri={imageUri} title="Scanning your photo…" subtitle="Gearup is generating a service description" />
       {busy ? (
         <View style={styles.busy}>
           <ActivityIndicator color={colors.primary} />

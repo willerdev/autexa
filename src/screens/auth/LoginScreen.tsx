@@ -52,7 +52,7 @@ export function LoginScreen() {
           source={require('../../../assets/images/icon.png')}
           style={styles.brandIcon}
         />
-        <Text style={styles.wordmark}>AUTEXA</Text>
+        <Text style={styles.wordmark}>GEARUP</Text>
         <Text style={styles.title}>Sign in</Text>
         <Text style={styles.subtitle}>Continue with your account</Text>
       </View>

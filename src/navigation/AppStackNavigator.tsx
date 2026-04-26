@@ -71,7 +71,7 @@ export function AppStackNavigator() {
       <Stack.Screen
         name="AiAssistant"
         component={AiAssistantScreen}
-        options={{ title: 'Ask Autexa', headerShown: false }}
+        options={{ title: 'Ask Gearup', headerShown: false }}
       />
       <Stack.Screen name="DamageScan" component={DamageScanScreen} options={{ title: 'Damage scan' }} />
       <Stack.Screen

@@ -164,7 +164,7 @@ export function HomeScreen() {
             <ProviderDashboardScreen />
           ) : homeMode === 'ai' ? (
             <Card style={styles.aiCard}>
-              <Text style={styles.aiTitle}>Ask Autexa</Text>
+              <Text style={styles.aiTitle}>Ask Gearup</Text>
               <Text style={styles.aiSub}>How can I help?</Text>
               <TextInput
                 value={aiPrompt}
@@ -174,7 +174,7 @@ export function HomeScreen() {
                 style={styles.aiInput}
                 multiline
               />
-              <PrimaryButton title="Ask Autexa" onPress={openAi} disabled={!aiPrompt.trim()} />
+              <PrimaryButton title="Ask Gearup" onPress={openAi} disabled={!aiPrompt.trim()} />
               <Pressable onPress={() => setHomeMode('manual')} style={styles.manualLink} hitSlop={8}>
                 <Text style={styles.manualLinkText}>Browse services yourself</Text>
               </Pressable>
@@ -220,7 +220,7 @@ export function HomeScreen() {
                 <ProviderDashboardScreen />
               ) : homeMode === 'ai' ? (
                 <Card style={styles.aiCard}>
-                  <Text style={styles.aiTitle}>Ask Autexa</Text>
+                  <Text style={styles.aiTitle}>Ask Gearup</Text>
                   <Text style={styles.aiSub}>How can I help?</Text>
                   <TextInput
                     value={aiPrompt}
@@ -230,7 +230,7 @@ export function HomeScreen() {
                     style={styles.aiInput}
                     multiline
                   />
-                  <PrimaryButton title="Ask Autexa" onPress={openAi} disabled={!aiPrompt.trim()} />
+                  <PrimaryButton title="Ask Gearup" onPress={openAi} disabled={!aiPrompt.trim()} />
                   <Pressable onPress={() => setHomeMode('manual')} style={styles.manualLink} hitSlop={8}>
                     <Text style={styles.manualLinkText}>Browse services yourself</Text>
                   </Pressable>

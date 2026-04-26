@@ -227,7 +227,7 @@ export function BookingConfirmScreen({ route }: Props) {
       const title = service?.title ?? serviceName ?? 'Service';
       const loc = provider?.location ? ` · ${provider.location}` : '';
       await Share.share({
-        message: `${title} — ${providerName}${loc}\nBook on Autexa.`,
+        message: `${title} — ${providerName}${loc}\nBook on Gearup.`,
       });
     } catch {
       /* user dismissed */

@@ -58,7 +58,7 @@ export function takeBillPreviewForChatResponse(userId) {
     out.image = { mimeType: v.image.mimeType || 'image/png', dataBase64: v.image.dataBase64 };
   }
   if (v.textReceipt?.lines?.length) {
-    out.textReceipt = { title: v.textReceipt.title || 'Autexa bill', lines: v.textReceipt.lines };
+    out.textReceipt = { title: v.textReceipt.title || 'Gearup bill', lines: v.textReceipt.lines };
   }
   return Object.keys(out).length ? out : null;
 }
@@ -80,7 +80,7 @@ export function buildTextReceiptLines({
   const payHuman = paymentMethodLabel(payDb);
   return [
     '──────────────',
-    'AUTEXA · BOOKING BILL',
+    'GEARUP · BOOKING BILL',
     '──────────────',
     `Service: ${serviceName}`,
     `Provider: ${providerName}`,
@@ -103,14 +103,14 @@ function buildEnglishBillPrompt({
   const pay = paymentMethodLabel(normalizeBookingPaymentMethod(paymentMethod));
   return [
     'Clean professional service receipt photograph, white paper on light desk, soft studio light, high contrast readable text.',
-    'Title line text: AUTEXA',
+    'Title line text: GEARUP',
     'Subtitle: BOOKING BILL',
     `Service line: ${String(serviceName).slice(0, 80)}`,
     `Provider line: ${String(providerName).slice(0, 80)}`,
     `Date and time lines: ${String(bookingDate)} — ${String(bookingTime)}`,
     `Total line: ${String(totalLabel)}`,
     `Payment: ${pay}`,
-    'Minimal thin border. No faces. No logos except plain word AUTEXA. Photorealistic document style, 3:4 portrait.',
+    'Minimal thin border. No faces. No logos except plain word GEARUP. Photorealistic document style, 3:4 portrait.',
   ].join(' ');
 }
 

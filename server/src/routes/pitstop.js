@@ -262,7 +262,7 @@ pitstopRouter.post('/auto-book', async (req, res) => {
     await notifyUserInAppAndSms(sb, {
       userId: req.user.id,
       title: 'Auto-booked',
-      body: `Autexa booked ${svc.name} with ${picked.name}.`,
+      body: `Gearup booked ${svc.name} with ${picked.name}.`,
       data: {
         booking_id: booking.id,
         provider_id: picked.id,
@@ -283,7 +283,7 @@ pitstopRouter.post('/auto-book', async (req, res) => {
       totalLabel,
       paymentMethodRaw: payMethod,
     });
-    const textReceipt = { title: 'Autexa booking bill', lines };
+    const textReceipt = { title: 'Gearup booking bill', lines };
     const billPreview = { textReceipt };
 
     return res.json({

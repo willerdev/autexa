@@ -45,7 +45,7 @@ export function TypingIndicator() {
   }, [o1, o2, o3]);
 
   return (
-    <View style={styles.wrap} accessibilityLabel="Autexa is typing">
+    <View style={styles.wrap} accessibilityLabel="Gearup is typing">
       <View style={styles.bubble}>
         <View style={styles.dots}>
           <Animated.View style={[styles.dot, { opacity: o1 }]} />

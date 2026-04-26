@@ -46,7 +46,7 @@ export function SavingsChallengesScreen() {
     <ScreenScroll edges={['top', 'left', 'right']}>
       <Text style={styles.title}>Savings challenges</Text>
       <Text style={styles.sub}>
-        Compete with friends to reach a target fastest. Winner gets a 10% bonus from Autexa (not deducted from players).
+        Compete with friends to reach a target fastest. Winner gets a 10% bonus from Gearup (not deducted from players).
       </Text>
 
       <PrimaryButton title="Create challenge" onPress={() => navigation.navigate('SavingsChallengeDetail', { challengeId: 'new' })} />

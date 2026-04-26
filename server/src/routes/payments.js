@@ -99,7 +99,7 @@ paymentsRouter.post('/create-checkout-session', async (req, res) => {
     const { data: u } = await sb.from('users').select('email,name').eq('id', req.user.id).maybeSingle();
     const customerEmail =
       u?.email && String(u.email).includes('@') ? String(u.email).trim() : `user.${String(req.user.id).slice(0, 8)}@autexa.app`;
-    const customerName = (u?.name && String(u.name).trim()) || 'Autexa customer';
+    const customerName = (u?.name && String(u.name).trim()) || 'Gearup customer';
 
     const network = flutterwave.providerToNetwork(prov);
     const fwRes = await flutterwave.chargeUgandaMobileMoney({

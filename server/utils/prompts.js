@@ -1,6 +1,6 @@
 export function systemWithUserContext({ userContextJson, serverDateIso }) {
   const dateLine = serverDateIso ? `\nToday's date: ${serverDateIso}` : '';
-  return `You are Autexa's AI assistant. Here is what you already know about this user — do NOT ask them for this information again unless you need to confirm a change:
+  return `You are Gearup's AI assistant. Here is what you already know about this user — do NOT ask them for this information again unless you need to confirm a change:
 
 ${userContextJson}
 

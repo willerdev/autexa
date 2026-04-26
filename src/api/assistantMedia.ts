@@ -14,7 +14,7 @@ export async function postAssistantChatAttachment(
   fileName: string,
 ): Promise<{ summary: string }> {
   if (!isAutexaApiConfigured()) {
-    throw new AutexaApiError('Autexa API URL is not configured (EXPO_PUBLIC_AUTEXA_API_URL).', 0);
+    throw new AutexaApiError('App API URL is not configured (EXPO_PUBLIC_AUTEXA_API_URL).', 0);
   }
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
@@ -54,7 +54,7 @@ export async function postAssistantChatAttachment(
       const cannot = text.match(/Cannot (GET|POST|PUT|PATCH|DELETE)\s+(\S+)/i);
       msg = cannot
         ? `This server does not support ${cannot[2]} (${cannot[1]}). Check EXPO_PUBLIC_AUTEXA_API_URL and deploy the latest API.`
-        : `Server returned HTML instead of JSON (${res.status}). Check EXPO_PUBLIC_AUTEXA_API_URL points at the Autexa Node API.`;
+        : `Server returned HTML instead of JSON (${res.status}). Check EXPO_PUBLIC_AUTEXA_API_URL points at the Node API.`;
     }
     if (res.status === 404 && /^not found$/i.test(String(msg).trim())) {
       msg = `API returned 404 for ${path}. Use EXPO_PUBLIC_AUTEXA_API_URL as the server root only (no trailing /api), then rebuild.`;

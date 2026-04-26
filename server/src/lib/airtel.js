@@ -80,7 +80,7 @@ export async function requestAirtelDisbursement({ amount, phone, externalId, des
     `${BASE}/standard/v1/disbursements/`,
     {
       payee: { msisdn },
-      reference: description || 'Autexa withdrawal',
+      reference: description || 'Gearup withdrawal',
       pin: process.env.AIRTEL_DISBURSE_PIN || '',
       transaction: { amount: Math.round(Number(amount)), id: externalId },
     },

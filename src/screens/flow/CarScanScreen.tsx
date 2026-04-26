@@ -49,7 +49,7 @@ export function CarScanScreen({ navigation, route }: Props) {
   const instructions = useMemo(() => {
     if (mode === 'cluster') return 'Take a clear photo of the instrument cluster (warning lights, messages).';
     if (mode === 'interior') return 'Take a photo of the interior area you want help with (seats, AC controls, etc.).';
-    return 'Take a photo of the exterior. Autexa can suggest services like wash, detailing, or repairs.';
+    return 'Take a photo of the exterior. Gearup can suggest services like wash, detailing, or repairs.';
   }, [mode]);
 
   const takePhoto = async () => {
@@ -150,7 +150,7 @@ export function CarScanScreen({ navigation, route }: Props) {
               </Pressable>
             ))}
             <PrimaryButton
-              title="Ask Autexa about this"
+              title="Ask Gearup about this"
               variant="outline"
               onPress={() =>
                 navigation.navigate('AiAssistant', {
@@ -167,7 +167,7 @@ export function CarScanScreen({ navigation, route }: Props) {
         visible={scanning}
         imageUri={scanUri}
         title="Scanning…"
-        subtitle="Autexa is analyzing your photo for issues and service suggestions"
+        subtitle="Gearup is analyzing your photo for issues and service suggestions"
       />
     </ScreenScroll>
   );

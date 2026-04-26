@@ -100,7 +100,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: 'get_available_services',
     description:
-      'Fetches marketplace services Autexa lists. Use when the user asks what services exist or what you can book.',
+      'Fetches marketplace services Gearup lists. Use when the user asks what services exist or what you can book.',
     parameters: objectSchema({
       search: { type: SchemaType.STRING, description: 'Optional keyword to filter by service name' },
       category: { type: SchemaType.STRING, description: 'Optional category filter' },
@@ -160,7 +160,7 @@ Never store secrets. Do not change other fields.`,
   {
     name: 'discover_services',
     description: `Discovers all active provider-posted services on the platform (any category: food, automotive, cleaning, etc.).
-Use when the user asks what is available, what they can order, or whether Autexa offers something specific.
+Use when the user asks what is available, what they can order, or whether Gearup offers something specific.
 Always call this before assuming a service does or does not exist — providers add new listings anytime.`,
     parameters: objectSchema({
       keyword: {
@@ -231,7 +231,7 @@ Do not store card numbers or passwords.`,
   },
   {
     name: 'get_payment_method_options',
-    description: `Returns supported booking payment methods for Autexa. Use when the user must choose how to pay. Always offer: wallet (in-app UGX), mobile_money (Flutterwave v4 UG MM push for deposit), cash/pay_later (pay on arrival or later), card (legacy label; same as mobile_money deposit in app). Then call emit_chat_widgets with payment_method_picker or list options as numbered choices in text.`,
+    description: `Returns supported booking payment methods for Gearup. Use when the user must choose how to pay. Always offer: wallet (in-app UGX), mobile_money (Flutterwave v4 UG MM push for deposit), cash/pay_later (pay on arrival or later), card (legacy label; same as mobile_money deposit in app). Then call emit_chat_widgets with payment_method_picker or list options as numbered choices in text.`,
     parameters: objectSchema({}),
   },
   {
@@ -362,7 +362,7 @@ estimated_total is in major currency units (e.g. USD dollars); server converts t
   },
   {
     name: 'get_wallet_balance',
-    description: `Gets the user's Autexa wallet balance (UGX). Use for "what's my balance?", "how much in my wallet?", "can I afford X?". Always check before pay_provider_from_wallet.`,
+    description: `Gets the user's Gearup wallet balance (UGX). Use for "what's my balance?", "how much in my wallet?", "can I afford X?". Always check before pay_provider_from_wallet.`,
     parameters: objectSchema(
       {
         user_id: { type: SchemaType.STRING, description: 'Authenticated user UUID' },
@@ -475,7 +475,7 @@ estimated_total is in major currency units (e.g. USD dollars); server converts t
   },
   {
     name: 'withdraw_to_mobile_money',
-    description: `Withdraws UGX from the Autexa wallet to the user's Uganda mobile money account via Flutterwave. High impact: confirm amount and full phone number; for network use mtn, airtel, or auto (auto infers MTN/Airtel from the number prefix). user_confirmed: true only after clear yes. Check balance first.`,
+    description: `Withdraws UGX from the Gearup wallet to the user's Uganda mobile money account via Flutterwave. High impact: confirm amount and full phone number; for network use mtn, airtel, or auto (auto infers MTN/Airtel from the number prefix). user_confirmed: true only after clear yes. Check balance first.`,
     parameters: objectSchema(
       {
         user_id: { type: SchemaType.STRING, description: 'Authenticated user UUID' },
@@ -495,7 +495,7 @@ estimated_total is in major currency units (e.g. USD dollars); server converts t
   },
   {
     name: 'save_wallet_ai_memory',
-    description: `Saves a short wallet-related note the user wants Autexa to remember (e.g. preferred withdraw number, reminders). Confirm before saving; keep text short; no card numbers or passwords.`,
+    description: `Saves a short wallet-related note the user wants Gearup to remember (e.g. preferred withdraw number, reminders). Confirm before saving; keep text short; no card numbers or passwords.`,
     parameters: objectSchema(
       {
         user_id: { type: SchemaType.STRING, description: 'Authenticated user UUID' },
@@ -951,7 +951,7 @@ export const TOOL_EXECUTORS = {
 
   get_payment_method_options: async () => ({
     options: [
-      { id: 'wallet', label: 'Autexa wallet', db_value: 'wallet', hint: 'UGX balance in the app' },
+      { id: 'wallet', label: 'Gearup wallet', db_value: 'wallet', hint: 'UGX balance in the app' },
       { id: 'card', label: 'Mobile money deposit', db_value: 'card', hint: 'Flutterwave v4 — approve on phone' },
       { id: 'pay_later', label: 'Cash / pay later', db_value: 'pay_later', hint: 'Pay on arrival or later' },
       { id: 'mobile_money', label: 'Mobile money', db_value: 'mobile_money', hint: 'UG mobile money via Flutterwave' },
@@ -1016,7 +1016,7 @@ export const TOOL_EXECUTORS = {
       totalLabel,
       paymentMethodRaw: payment_method || 'card',
     });
-    mergeBillPreview(user_id, { textReceipt: { title: 'Autexa booking bill', lines } });
+    mergeBillPreview(user_id, { textReceipt: { title: 'Gearup booking bill', lines } });
 
     try {
       const img = await generateBookingBillImage({

@@ -116,7 +116,7 @@ export function PayGuestScreen({ slug, onClose }: { slug: string; onClose: () =>
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
           <Image source={require('../../../assets/images/icon.png')} style={styles.brandIcon} />
-          <Text style={styles.brand}>Autexa</Text>
+          <Text style={styles.brand}>Gearup</Text>
         </View>
         <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={28} color={colors.text} />
@@ -125,7 +125,7 @@ export function PayGuestScreen({ slug, onClose }: { slug: string; onClose: () =>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Send mobile money</Text>
         <Text style={styles.sub}>
-          Funds go to the Autexa user who shared this link. You do not need an Autexa account.
+          Funds go to the Gearup user who shared this link. You do not need a Gearup account.
         </Text>
         {loadErr ? <Text style={styles.err}>{loadErr}</Text> : null}
         {meta ? (

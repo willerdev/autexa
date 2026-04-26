@@ -62,7 +62,7 @@ export function ProviderDashboardScreen() {
             </Pressable>
             <Pressable style={styles.tile} onPress={() => navigateAppStack(navigation, 'AiAssistant', undefined)}>
               <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
-              <Text style={styles.tileTitle}>Ask Autexa</Text>
+              <Text style={styles.tileTitle}>Ask Gearup</Text>
               <Text style={styles.tileSub}>Help writing posts</Text>
             </Pressable>
             <Pressable style={styles.tile} onPress={() => navigateAppStack(navigation, 'ProviderAddBusiness', undefined)}>

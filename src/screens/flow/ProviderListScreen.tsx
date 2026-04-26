@@ -77,7 +77,7 @@ export function ProviderListScreen({ navigation, route }: Props) {
   const onAutoSelect = async () => {
     if (autoBusy.current || !isAutexaApiConfigured()) {
       if (!isAutexaApiConfigured()) {
-        Alert.alert('Autexa API', 'Set EXPO_PUBLIC_AUTEXA_API_URL and run the Node server (see /server).');
+        Alert.alert('App setup', 'Set EXPO_PUBLIC_AUTEXA_API_URL and run the Node server (see /server).');
       }
       return;
     }

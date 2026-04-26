@@ -36,13 +36,13 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     () => [
       {
         key: 'logo',
-        title: 'AUTEXA',
+        title: 'GEARUP',
         subtitle: 'Your AI-powered marketplace for car services.',
         variant: 'logo',
       },
       {
         key: 'ai',
-        title: 'Ask Autexa',
+        title: 'Ask Gearup',
         subtitle: 'Find the best provider, auto-book, reschedule, or cancel — right in chat.',
         variant: 'ai',
       },
@@ -108,7 +108,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             source={require('../../assets/images/icon.png')}
             style={styles.logoImage}
           />
-          <Text style={[styles.logoText, { color: colors.primary }]}>AUTEXA</Text>
+          <Text style={[styles.logoText, { color: colors.primary }]}>GEARUP</Text>
         </View>
       );
     }

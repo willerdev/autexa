@@ -168,11 +168,11 @@ app.get('/checkout/return', (req, res) => {
     ? `autexa://checkout-complete?tx_ref=${encodeURIComponent(txRef)}`
     : `autexa://checkout-complete?session_id=${encodeURIComponent(sessionId)}`;
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/></head><body>
-<p>Payment complete. Opening Autexa…</p>
+<p>Payment complete. Opening Gearup…</p>
 <script>
   (function(){
     window.location.href = ${JSON.stringify(deepLink)};
-    setTimeout(function(){ document.body.innerHTML += '<p>If the app did not open, return to Autexa manually.</p>'; }, 4000);
+    setTimeout(function(){ document.body.innerHTML += '<p>If the app did not open, return to Gearup manually.</p>'; }, 4000);
   })();
 </script></body></html>`);
 });

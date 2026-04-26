@@ -110,7 +110,7 @@ export function MyCarsScreen() {
       ) : (
         <Card>
           <Text style={styles.emptyTitle}>No cars yet</Text>
-          <Text style={styles.emptySub}>Add a car so Autexa can suggest services and help diagnose issues.</Text>
+          <Text style={styles.emptySub}>Add a car so Gearup can suggest services and help diagnose issues.</Text>
         </Card>
       )}
 

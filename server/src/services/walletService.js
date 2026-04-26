@@ -266,7 +266,7 @@ export async function initiateTopup({ userId, amount, phone, provider, paymentLi
       network,
       txRef: externalId,
       email,
-      fullname: 'Autexa wallet',
+      fullname: 'Gearup wallet',
     });
     const n = fwRes?.data?.next_action?.payment_instruction?.note;
     if (typeof n === 'string' && n.trim()) instructionNote = n.trim();
@@ -613,8 +613,8 @@ export async function initiateWithdrawal({ userId, amount, phone, provider }) {
       phone,
       network,
       reference: externalId,
-      narration: 'Autexa Withdrawal',
-      beneficiaryName: 'Autexa user',
+      narration: 'Gearup Withdrawal',
+      beneficiaryName: 'Gearup user',
     });
     // Legacy:
     // if (p === 'mtn') await mtn.requestMtnDisbursement({ amount: amt, phone, externalId, description: 'Autexa Withdrawal' });

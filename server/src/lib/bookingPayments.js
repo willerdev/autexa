@@ -15,7 +15,7 @@ export function normalizeBookingPaymentMethod(raw) {
 export function paymentMethodLabel(db) {
   const m = {
     card: 'Mobile money (Flutterwave v4)',
-    wallet: 'Autexa wallet',
+    wallet: 'Gearup wallet',
     pay_later: 'Cash / pay later',
     mobile_money: 'Mobile money',
   };

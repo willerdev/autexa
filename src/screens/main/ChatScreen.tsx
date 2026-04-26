@@ -44,7 +44,7 @@ export function ChatScreen() {
 
   const headerSub = useMemo(() => {
     if (!peerId) return 'Set EXPO_PUBLIC_SUPPORT_USER_ID in .env (Supabase Auth user UUID)';
-    return 'Autexa support';
+    return 'Gearup support';
   }, [peerId]);
 
   useEffect(() => {

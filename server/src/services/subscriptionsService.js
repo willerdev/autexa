@@ -105,7 +105,7 @@ export async function startProfessionalSubscription({ userId, phone, provider })
     network: provider ? flutterwave.providerToNetwork(provider) : null,
     txRef,
     email: 'customer@autexa.app',
-    fullname: 'Autexa subscription',
+    fullname: 'Gearup subscription',
     meta: { kind: 'subscription_professional', user_id: userId },
   });
 

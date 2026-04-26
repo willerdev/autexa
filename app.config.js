@@ -80,9 +80,9 @@ module.exports = {
       bundleIdentifier: 'com.autexa.app',
       infoPlist: {
         ...(appJson.expo.ios?.infoPlist ?? {}),
-        NSCameraUsageDescription: 'Autexa uses the camera so you can show the assistant photos of your vehicle.',
-        NSMicrophoneUsageDescription: 'Autexa records short audio so the assistant can help diagnose engine sounds.',
-        NSPhotoLibraryUsageDescription: 'Autexa can attach photos from your library when you ask the assistant for help.',
+        NSCameraUsageDescription: 'Gearup uses the camera so you can show the assistant photos of your vehicle.',
+        NSMicrophoneUsageDescription: 'Gearup records short audio so the assistant can help diagnose engine sounds.',
+        NSPhotoLibraryUsageDescription: 'Gearup can attach photos from your library when you ask the assistant for help.',
       },
     },
     android: {
@@ -112,7 +112,7 @@ module.exports = {
       [
         'expo-location',
         {
-          locationWhenInUsePermission: 'Allow Autexa to use your location to show nearby providers on the map.',
+          locationWhenInUsePermission: 'Allow Gearup to use your location to show nearby providers on the map.',
         },
       ],
       'expo-web-browser',

@@ -125,7 +125,7 @@ ${JSON.stringify({
       {
         model: modelName,
         systemInstruction: `
-You are Autexa's AI assistant — an intelligent service booking helper for many verticals (automotive, food, cleaning, and anything providers list).
+You are Gearup's AI assistant — an intelligent service booking helper for many verticals (automotive, food, cleaning, and anything providers list).
 The authenticated user's ID is: ${userId}
 Today's date is: ${new Date().toDateString()} (${new Date().toISOString().slice(0, 10)})
 ${userMemorySnippet}

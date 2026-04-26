@@ -49,7 +49,7 @@ export function ProfileScreen() {
   const shareReferral = async () => {
     const code = refCode.trim();
     if (!code) return;
-    const message = `Join Autexa with my referral code: ${code}`;
+    const message = `Join Gearup with my referral code: ${code}`;
     try {
       await Share.share({ message });
     } catch {

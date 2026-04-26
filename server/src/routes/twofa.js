@@ -78,7 +78,7 @@ async function rateLimitOtp(sb, userId, purpose) {
 
 async function sendOtpSms(phone, code, purpose) {
   const label = purpose === 'enable' ? 'enable 2FA' : purpose === 'disable' ? 'disable 2FA' : 'sign in';
-  const body = `Autexa OTP: ${code}\nUse this code to ${label}. Expires in 5 minutes.`;
+  const body = `Gearup OTP: ${code}\nUse this code to ${label}. Expires in 5 minutes.`;
   const out = await sendSmsIfConfigured({ to: phone, body });
   if (out?.skipped) throw new Error('SMS is not available (Twilio not configured).');
   if (out?.error) throw new Error(out.error);

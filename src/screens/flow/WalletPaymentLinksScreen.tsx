@@ -69,7 +69,7 @@ export function WalletPaymentLinksScreen() {
       const url = payUrl(row.slug);
       Alert.alert('Link created', url, [
         { text: 'Copy', onPress: () => void Clipboard.setStringAsync(url) },
-        { text: 'Share', onPress: () => void Share.share({ message: `Pay me on Autexa: ${url}` }) },
+        { text: 'Share', onPress: () => void Share.share({ message: `Pay me on Gearup: ${url}` }) },
         { text: 'OK' },
       ]);
     } catch (e) {
@@ -98,7 +98,7 @@ export function WalletPaymentLinksScreen() {
     <ScreenScroll edges={['top', 'left', 'right']}>
       <Text style={styles.title}>Payment links</Text>
       <Text style={styles.sub}>
-        Anyone with the link can send mobile money to your Autexa wallet. They do not need the app. Set a fixed amount
+        Anyone with the link can send mobile money to your Gearup wallet. They do not need the app. Set a fixed amount
         to require an exact sum.
       </Text>
       {!env.webAppUrl ? (
@@ -156,7 +156,7 @@ export function WalletPaymentLinksScreen() {
             </Pressable>
             <Pressable
               style={styles.iconBtn}
-              onPress={() => void Share.share({ message: `Pay me on Autexa: ${payUrl(r.slug)}` })}
+              onPress={() => void Share.share({ message: `Pay me on Gearup: ${payUrl(r.slug)}` })}
             >
               <Ionicons name="share-outline" size={22} color={colors.primary} />
               <Text style={styles.iconBtnLabel}>Share</Text>

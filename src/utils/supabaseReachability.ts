@@ -11,10 +11,10 @@ export async function logSupabaseReachabilityInDev(): Promise<void> {
     const res = await fetch(`${base}/auth/v1/health`, {
       headers: { Accept: 'application/json' },
     });
-    console.log('[Autexa] Supabase Auth reachable, status:', res.status);
+    console.log('[Gearup] Supabase Auth reachable, status:', res.status);
   } catch (e) {
     console.warn(
-      '[Autexa] Supabase request failed from this device. Step: same Wi‑Fi as PC? VPN off? Project active in dashboard? Try phone browser: open your Supabase URL.',
+      '[Gearup] Supabase request failed from this device. Step: same Wi‑Fi as PC? VPN off? Project active in dashboard? Try phone browser: open your Supabase URL.',
       e,
     );
   }

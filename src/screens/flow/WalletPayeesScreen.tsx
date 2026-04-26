@@ -158,7 +158,7 @@ export function WalletPayeesScreen() {
     <ScreenScroll edges={['top', 'left', 'right']}>
       <Text style={styles.title}>Saved payees</Text>
       <Text style={styles.lead}>
-        Add providers (by provider id from a booking) or other Autexa users (by their user id). Send money from your
+        Add providers (by provider id from a booking) or other Gearup users (by their user id). Send money from your
         wallet without re-typing ids.
       </Text>
 

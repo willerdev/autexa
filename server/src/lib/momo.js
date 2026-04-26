@@ -41,8 +41,8 @@ export async function requestMtnCollection({ amount, phone, externalId, descript
       currency: 'UGX',
       externalId,
       payer: { partyIdType: 'MSISDN', partyId: String(phone).replace(/\D/g, '') },
-      payerMessage: description || 'Autexa wallet',
-      payeeNote: 'Autexa Wallet Top-up',
+      payerMessage: description || 'Gearup wallet',
+      payeeNote: 'Gearup Wallet Top-up',
     },
     {
       headers: {
@@ -85,8 +85,8 @@ export async function requestMtnDisbursement({ amount, phone, externalId, descri
       currency: 'UGX',
       externalId,
       payee: { partyIdType: 'MSISDN', partyId: String(phone).replace(/\D/g, '') },
-      payerMessage: description || 'Autexa withdrawal',
-      payeeNote: 'Autexa Withdrawal',
+      payerMessage: description || 'Gearup withdrawal',
+      payeeNote: 'Gearup Withdrawal',
     },
     {
       headers: {

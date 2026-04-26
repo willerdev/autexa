@@ -175,7 +175,7 @@ export function inferUgNetworkFromPhone(phone) {
 
 function splitName(full) {
   const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: 'Autexa', last: 'User' };
+  if (parts.length === 0) return { first: 'Gearup', last: 'User' };
   if (parts.length === 1) return { first: parts[0], last: 'User' };
   return { first: parts[0], last: parts.slice(1).join(' ') || 'User' };
 }
@@ -242,7 +242,7 @@ export async function chargeUgandaMobileMoney({
   network,
   txRef,
   email,
-  fullname = 'Autexa user',
+  fullname = 'Gearup user',
   meta,
 }) {
   if (flutterwaveStubEnabled()) {
@@ -345,7 +345,7 @@ export async function createUgMobileMoneyTransfer({
   network,
   reference,
   narration,
-  beneficiaryName = 'Autexa user',
+  beneficiaryName = 'Gearup user',
 }) {
   if (flutterwaveStubEnabled()) {
     return { data: { id: `stub-${reference}`, status: 'SUCCESSFUL', reference } };
@@ -371,7 +371,7 @@ export async function createUgMobileMoneyTransfer({
         action: 'instant',
         type: 'mobile_money',
         reference: String(reference),
-        narration: narration || 'Autexa withdrawal',
+        narration: narration || 'Gearup withdrawal',
         payment_instruction: {
           source_currency: 'UGX',
           destination_currency: 'UGX',

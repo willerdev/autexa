@@ -43,3 +43,4 @@ cred.txt
 # generated native folders
 /ios
 /android
+server/env.txt
