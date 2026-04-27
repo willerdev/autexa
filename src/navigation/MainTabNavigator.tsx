@@ -11,6 +11,7 @@ import { ProviderServicesScreen } from '../screens/provider/ProviderServicesScre
 import type { MainTabParamList } from '../types';
 import { colors } from '../theme';
 import { useUiStore } from '../stores/uiStore';
+import { useSessionStore } from '../stores/sessionStore';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -27,6 +28,8 @@ export function MainTabNavigator() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 10);
   const appMode = useUiStore((s) => s.appMode);
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
 
   return (
     <Tab.Navigator
@@ -57,7 +60,7 @@ export function MainTabNavigator() {
           tabBarLabel: appMode === 'provider' ? 'Bookings' : 'Recent activities',
         }}
       />
-      {appMode === 'provider' ? (
+      {isAdmin && appMode === 'provider' ? (
         <Tab.Screen name="ProviderServicesTab" component={ProviderServicesScreen} options={{ title: 'Services' }} />
       ) : (
         <Tab.Screen name="MyCars" component={MyCarsScreen} options={{ title: 'My cars' }} />

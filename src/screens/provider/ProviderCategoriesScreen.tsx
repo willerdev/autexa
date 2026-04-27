@@ -12,8 +12,11 @@ import {
 } from '../../api/providerDashboard';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 export function ProviderCategoriesScreen() {
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [providerId, setProviderId] = useState<string | null>(null);
   const [rows, setRows] = useState<ProviderCategoryRow[]>([]);
   const [name, setName] = useState('');
@@ -22,6 +25,7 @@ export function ProviderCategoriesScreen() {
   const canAdd = useMemo(() => Boolean(name.trim()), [name]);
 
   const load = async () => {
+    if (!isAdmin) return;
     setBusy(true);
     try {
       await ensureProviderProfile();
@@ -45,6 +49,17 @@ export function ProviderCategoriesScreen() {
   useEffect(() => {
     void load();
   }, []);
+
+  if (!isAdmin) {
+    return (
+      <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Provider categories are only available to admin accounts.</Text>
+        </Card>
+      </ScreenScroll>
+    );
+  }
 
   const add = async () => {
     if (!providerId || !canAdd) return;
@@ -123,6 +138,8 @@ export function ProviderCategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
+  deniedTitle: { fontWeight: '900', color: colors.text, fontSize: 16, marginBottom: 6 },
+  deniedSub: { color: colors.textMuted, fontWeight: '600', lineHeight: 20 },
   title: {
     marginTop: spacing.sm,
     marginBottom: spacing.md,

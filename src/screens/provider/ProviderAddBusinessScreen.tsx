@@ -7,9 +7,12 @@ import { supabase } from '../../lib/supabase';
 import type { AppStackParamList } from '../../types';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 export function ProviderAddBusinessScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [name, setName] = useState('');
   const [serviceType, setServiceType] = useState('');
   const [location, setLocation] = useState('');
@@ -20,6 +23,7 @@ export function ProviderAddBusinessScreen() {
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
+    if (!isAdmin) return;
     const nm = name.trim();
     const st = serviceType.trim();
     if (!nm || !st) {
@@ -64,6 +68,17 @@ export function ProviderAddBusinessScreen() {
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Adding provider listings from this screen is only available to admin accounts.</Text>
+        </Card>
+      </ScreenScroll>
+    );
+  }
+
   return (
     <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
       <Text style={styles.title}>Add business</Text>
@@ -91,6 +106,8 @@ export function ProviderAddBusinessScreen() {
 }
 
 const styles = StyleSheet.create({
+  deniedTitle: { fontWeight: '900', color: colors.text, fontSize: 16, marginBottom: 6 },
+  deniedSub: { color: colors.textMuted, fontWeight: '600', lineHeight: 20 },
   title: { fontSize: 22, fontWeight: '900', color: colors.text, marginTop: spacing.sm, marginBottom: spacing.sm },
   sub: { color: colors.textSecondary, lineHeight: 18, marginBottom: spacing.md },
   card: { padding: spacing.md, gap: spacing.md, borderRadius: radius.lg, marginBottom: spacing.md },

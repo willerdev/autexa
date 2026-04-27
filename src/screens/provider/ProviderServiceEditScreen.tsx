@@ -17,10 +17,13 @@ import { Card, PrimaryButton, ScanningOverlay, ScreenScroll, TextField } from '.
 import type { AppStackParamList } from '../../types';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ProviderServiceEdit'>;
 
 export function ProviderServiceEditScreen({ navigation, route }: Props) {
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const serviceId = route.params?.serviceId;
   const [providerId, setProviderId] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -54,6 +57,7 @@ export function ProviderServiceEditScreen({ navigation, route }: Props) {
   const canSave = useMemo(() => Boolean(title.trim()), [title]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     let alive = true;
     void (async () => {
       setBusy(true);
@@ -119,7 +123,18 @@ export function ProviderServiceEditScreen({ navigation, route }: Props) {
     return () => {
       alive = false;
     };
-  }, [serviceId]);
+  }, [serviceId, isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Editing/creating provider services is only available to admin accounts.</Text>
+        </Card>
+      </ScreenScroll>
+    );
+  }
 
   const buildMetadataPayload = (): Record<string, unknown> => {
     let extra: Record<string, unknown> = {};
@@ -372,6 +387,8 @@ export function ProviderServiceEditScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  deniedTitle: { fontWeight: '900', color: colors.text, fontSize: 16, marginBottom: 6 },
+  deniedSub: { color: colors.textMuted, fontWeight: '600', lineHeight: 20 },
   title: { marginTop: spacing.sm, marginBottom: spacing.md, fontSize: 26, fontWeight: '900', color: colors.text },
   card: { marginBottom: spacing.sm },
   section: { fontSize: 14, fontWeight: '900', color: colors.text, marginBottom: spacing.sm },

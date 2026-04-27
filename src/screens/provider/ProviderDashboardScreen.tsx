@@ -9,12 +9,16 @@ import type { MainTabParamList } from '../../types';
 import { navigateAppStack } from '../../utils/navigation';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 export function ProviderDashboardScreen() {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) return;
     let alive = true;
     void (async () => {
       try {
@@ -31,6 +35,12 @@ export function ProviderDashboardScreen() {
 
   return (
     <View style={styles.wrap}>
+      {!isAdmin ? (
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Provider tools are only available to admin accounts.</Text>
+        </Card>
+      ) : null}
       <View style={styles.header}>
         <Text style={styles.title}>Provider dashboard</Text>
         <View style={styles.pill}>
@@ -38,7 +48,7 @@ export function ProviderDashboardScreen() {
         </View>
       </View>
 
-      {!ready ? (
+      {!isAdmin ? null : !ready ? (
         <ProviderDashboardSkeleton />
       ) : (
         <Card style={styles.card}>
@@ -86,6 +96,16 @@ const styles = StyleSheet.create({
   wrap: {
     paddingTop: spacing.sm,
     gap: spacing.md,
+  },
+  deniedTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  deniedSub: {
+    fontSize: 13,
+    color: colors.textMuted,
   },
   header: {
     flexDirection: 'row',

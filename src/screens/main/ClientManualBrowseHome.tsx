@@ -8,7 +8,7 @@ import {
   defaultFilters,
   type HomeSearchFilters,
 } from '../../components';
-import { servicesForSelect } from '../../data/mockData';
+import { categories } from '../../data/mockData';
 import type { MainTabParamList, Provider } from '../../types';
 import { navigateAppStack } from '../../utils/navigation';
 import { colors, radius, spacing } from '../../theme';
@@ -27,11 +27,29 @@ type Props = {
 
 function matchesCategory(p: Provider, categoryId: string | null): boolean {
   if (!categoryId) return true;
-  const want = servicesForSelect
-    .filter((s) => s.categoryId === categoryId)
-    .map((s) => s.name.toLowerCase());
+
+  // Prefer real mapping from Supabase: providers.service_type -> services.category
+  const cat = String(p.serviceCategory ?? '').trim().toLowerCase();
+  if (cat && cat === String(categoryId).trim().toLowerCase()) return true;
+
   const spec = p.specialty.toLowerCase();
-  return want.some((w) => spec.includes(w) || w.includes(spec));
+  const loc = (p.location ?? '').toLowerCase();
+
+  const keywordsByCat: Record<string, string[]> = {
+    body_works: ['body', 'paint', 'panel', 'dent', 'spray', 'bumper', 'bodywork'],
+    car_detailing: ['detail', 'detailing', 'wash', 'valet', 'polish', 'ceramic', 'interior'],
+    car_inspection: ['inspection', 'inspect', 'review', 'diagnostic', 'diagnosis', 'checkup', 'assessment'],
+    car_maintenance: ['maintenance', 'service', 'oil', 'filter', 'tire', 'battery', 'alignment'],
+    car_upgrades: ['upgrade', 'custom', 'tune', 'tuning', 'performance', 'audio', 'accessories'],
+    car_spare_parts: ['spare', 'parts', 'part', 'tyres', 'tires', 'battery', 'oil', 'shop'],
+    delivery_services: ['delivery', 'courier', 'rider', 'shipping', 'drop off', 'dropoff'],
+    mechanical_works: ['mechanic', 'mechanical', 'engine', 'brake', 'suspension', 'gear', 'clutch'],
+    tow_trucks: ['tow', 'towing', 'recovery', 'breakdown'],
+  };
+
+  const want = keywordsByCat[categoryId];
+  if (!Array.isArray(want) || want.length === 0) return true;
+  return want.some((k) => spec.includes(k) || loc.includes(k));
 }
 
 function applyBrowseFilters(list: Provider[], q: string, f: HomeSearchFilters): Provider[] {
@@ -100,6 +118,7 @@ export function ClientManualBrowseHome({
   const [modalOpen, setModalOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<HomeSearchFilters>(defaultFilters);
   const [activeTab, setActiveTab] = useState('all');
+  const activeCategory = appliedFilters.categoryId;
 
   const filtered = useMemo(
     () => applyBrowseFilters(providers, query, appliedFilters),
@@ -158,6 +177,51 @@ export function ClientManualBrowseHome({
           navigateAppStack(navigation, 'SelectService', { query: q });
         }}
       />
+
+      {exploreMode ? (
+        <View style={styles.catsWrap}>
+          <View style={styles.catsHeader}>
+            <Text style={styles.catsTitle}>Categories</Text>
+            {activeCategory ? (
+              <Pressable
+                onPress={() => {
+                  setAppliedFilters((f) => ({ ...f, categoryId: null }));
+                  setActiveTab('all');
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.catsClear}>Clear</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <FlatList
+            data={categories}
+            keyExtractor={(c) => c.id}
+            numColumns={3}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.catRow}
+            renderItem={({ item: c }) => {
+              const on = appliedFilters.categoryId === c.id;
+              return (
+                <Pressable
+                  onPress={() => {
+                    setAppliedFilters((f) => ({ ...f, categoryId: c.id }));
+                    setActiveTab('all');
+                  }}
+                  style={({ pressed }) => [styles.catCard, on && styles.catCardOn, pressed && styles.catPressed]}
+                >
+                  <View style={[styles.catIcon, on && styles.catIconOn]}>
+                    <Ionicons name={c.icon as never} size={20} color={on ? '#fff' : colors.textSecondary} />
+                  </View>
+                  <Text style={[styles.catName, on && styles.catNameOn]} numberOfLines={2}>
+                    {c.name}
+                  </Text>
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      ) : null}
 
       <ScrollView
         horizontal
@@ -333,6 +397,70 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingRight: spacing.md,
   },
+  catsWrap: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  catsHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  catsTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  catsClear: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  catRow: {
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  catCard: {
+    flex: 1,
+    minWidth: 0,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catCardOn: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  catPressed: {
+    opacity: 0.92,
+  },
+  catIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.border,
+    marginBottom: 6,
+  },
+  catIconOn: {
+    backgroundColor: colors.primary,
+  },
+  catName: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textSecondary,
+  },
+  catNameOn: {
+    color: colors.text,
+  },
   tab: {
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
@@ -382,8 +510,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
@@ -455,7 +583,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   btnRow: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     flexDirection: 'row',
     gap: spacing.sm,
   },
@@ -465,7 +593,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -479,7 +607,7 @@ const styles = StyleSheet.create({
   primaryBtn: {
     flex: 1,
     borderRadius: radius.lg,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',

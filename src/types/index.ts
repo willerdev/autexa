@@ -3,7 +3,11 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export type Category = {
   id: string;
   name: string;
-  icon: 'car-sport-outline' | 'bus-outline' | 'medkit-outline' | 'airplane-outline';
+  /**
+   * Ionicons glyph name (from `@expo/vector-icons/Ionicons`).
+   * Kept as string so we can expand categories without touching shared types.
+   */
+  icon: string;
 };
 
 export type Service = {
@@ -20,6 +24,8 @@ export type Provider = {
   distanceKm: number;
   priceEstimate: string;
   specialty: string;
+  /** Derived from `services.category` via `providers.service_type -> services`. */
+  serviceCategory?: string | null;
   /** Raw `providers.location` when loaded from API (may include distance text). */
   location?: string;
   /** From `providers.base_price_cents` when loaded from API. */

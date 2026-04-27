@@ -13,14 +13,18 @@ import {
 import type { AppStackParamList } from '../../types';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 export function ProviderServicesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [providerId, setProviderId] = useState<string | null>(null);
   const [rows, setRows] = useState<(ProviderServiceRow & { provider_categories?: { name: string } | null })[]>([]);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
+    if (!isAdmin) return;
     setBusy(true);
     try {
       await ensureProviderProfile();
@@ -44,6 +48,17 @@ export function ProviderServicesScreen() {
   useEffect(() => {
     void load();
   }, []);
+
+  if (!isAdmin) {
+    return (
+      <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Provider services are only available to admin accounts.</Text>
+        </Card>
+      </ScreenScroll>
+    );
+  }
 
   return (
     <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
@@ -86,6 +101,8 @@ export function ProviderServicesScreen() {
 }
 
 const styles = StyleSheet.create({
+  deniedTitle: { fontWeight: '900', color: colors.text, fontSize: 16, marginBottom: 6 },
+  deniedSub: { color: colors.textMuted, fontWeight: '600', lineHeight: 20 },
   head: {
     flexDirection: 'row',
     alignItems: 'center',

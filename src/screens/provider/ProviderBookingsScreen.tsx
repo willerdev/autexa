@@ -10,13 +10,17 @@ import {
 } from '../../api/providerDashboard';
 import { colors, radius, spacing } from '../../theme';
 import { getErrorMessage } from '../../lib/errors';
+import { useSessionStore } from '../../stores/sessionStore';
 
 export function ProviderBookingsScreen() {
+  const profile = useSessionStore((s) => s.profile);
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [providerId, setProviderId] = useState<string | null>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = async () => {
+    if (!isAdmin) return;
     try {
       await ensureProviderProfile();
       const { data: p } = await getMyProviderProfile();
@@ -39,6 +43,17 @@ export function ProviderBookingsScreen() {
   useEffect(() => {
     void load();
   }, []);
+
+  if (!isAdmin) {
+    return (
+      <ScreenScroll edges={['top', 'left', 'right', 'bottom']}>
+        <Card>
+          <Text style={styles.deniedTitle}>Admin only</Text>
+          <Text style={styles.deniedSub}>Provider bookings are only available to admin accounts.</Text>
+        </Card>
+      </ScreenScroll>
+    );
+  }
 
   const setStatus = async (id: string, status: string) => {
     setBusyId(id);
@@ -101,6 +116,8 @@ export function ProviderBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  deniedTitle: { fontWeight: '900', color: colors.text, fontSize: 16, marginBottom: 6 },
+  deniedSub: { color: colors.textMuted, fontWeight: '600', lineHeight: 20 },
   head: {
     flexDirection: 'row',
     alignItems: 'center',

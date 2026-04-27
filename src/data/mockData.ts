@@ -1,24 +1,29 @@
 import type { Category, Service, Provider, ChatMessage, Booking, Car } from '../types';
 
 export const categories: Category[] = [
-  { id: 'auto', name: 'Auto', icon: 'car-sport-outline' as const },
-  { id: 'transport', name: 'Transport', icon: 'bus-outline' as const },
-  { id: 'health', name: 'Health', icon: 'medkit-outline' as const },
-  { id: 'travel', name: 'Travel', icon: 'airplane-outline' as const },
+  { id: 'body_works', name: 'Body works', icon: 'color-palette-outline' },
+  { id: 'car_detailing', name: 'Car Detailing', icon: 'sparkles-outline' },
+  { id: 'car_inspection', name: 'Car inspection and review', icon: 'search-outline' },
+  { id: 'car_maintenance', name: 'Car maintenance', icon: 'build-outline' },
+  { id: 'car_upgrades', name: 'Car Upgrades', icon: 'trending-up-outline' },
+  { id: 'car_spare_parts', name: 'Car spare Parts', icon: 'cube-outline' },
+  { id: 'delivery_services', name: 'Delivery Services', icon: 'bicycle-outline' },
+  { id: 'mechanical_works', name: 'Mechanical works', icon: 'construct-outline' },
+  { id: 'tow_trucks', name: 'Tow Trucks services', icon: 'car-outline' },
 ];
 
 export const quickServices: Service[] = [
-  { id: 'wash', name: 'Car Wash', categoryId: 'auto' },
-  { id: 'mechanic', name: 'Mechanic', categoryId: 'auto' },
-  { id: 'tow', name: 'Tow Truck', categoryId: 'auto' },
+  { id: 'wash', name: 'Car Wash', categoryId: 'car_detailing' },
+  { id: 'mechanic', name: 'Mechanic', categoryId: 'mechanical_works' },
+  { id: 'tow', name: 'Tow Truck', categoryId: 'tow_trucks' },
 ];
 
 export const servicesForSelect: Service[] = [
   ...quickServices,
-  { id: 'detail', name: 'Detailing', categoryId: 'auto' },
-  { id: 'tire', name: 'Tire Service', categoryId: 'auto' },
-  { id: 'battery', name: 'Battery Jump', categoryId: 'auto' },
-  { id: 'inspection', name: 'Inspection', categoryId: 'auto' },
+  { id: 'detail', name: 'Detailing', categoryId: 'car_detailing' },
+  { id: 'tire', name: 'Tire Service', categoryId: 'car_maintenance' },
+  { id: 'battery', name: 'Battery Jump', categoryId: 'car_maintenance' },
+  { id: 'inspection', name: 'Inspection', categoryId: 'car_inspection' },
 ];
 
 export const featuredProviders: Provider[] = [

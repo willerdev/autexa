@@ -19,6 +19,7 @@ export function ProfileScreen() {
   const profile = useSessionStore((s) => s.profile);
   const appMode = useUiStore((s) => s.appMode);
   const isProvider = appMode === 'provider';
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const [refCode, setRefCode] = useState<string>('');
   const [refCodeError, setRefCodeError] = useState<string>('');
 
@@ -178,7 +179,7 @@ export function ProfileScreen() {
         </Pressable>
       </Card>
 
-      {isProvider ? (
+      {isAdmin && isProvider ? (
         <>
           <Text style={styles.section}>Provider</Text>
           <Card>

@@ -66,9 +66,18 @@ export function HomeScreen() {
   }, [homeMode, providers.length, loadProviders]);
 
   const greetingName = user?.firstName ?? 'there';
+  const isAdmin = (profile?.role ?? 'user') === 'admin';
   const isClientManualBrowse = appMode === 'client' && homeMode === 'manual';
 
+  useEffect(() => {
+    // Safety: if a non-admin previously toggled provider mode, force it back off.
+    if (!isAdmin && appMode === 'provider') {
+      setAppMode('client');
+    }
+  }, [isAdmin, appMode, setAppMode]);
+
   const toggleProvider = async () => {
+    if (!isAdmin) return;
     if (!profile?.id) return;
     const next = appMode === 'provider' ? 'client' : 'provider';
     setAppMode(next);
@@ -135,9 +144,11 @@ export function HomeScreen() {
               <View style={styles.bellDot} />
             </Pressable>
           ) : null}
-          <Pressable onPress={() => void toggleProvider()} style={styles.modePill} hitSlop={10}>
-            <Text style={styles.modePillText}>{appMode === 'provider' ? 'Provider' : 'Client'}</Text>
-          </Pressable>
+          {isAdmin ? (
+            <Pressable onPress={() => void toggleProvider()} style={styles.modePill} hitSlop={10}>
+              <Text style={styles.modePillText}>{appMode === 'provider' ? 'Provider' : 'Client'}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
